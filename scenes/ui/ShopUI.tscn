@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://bdaw3p0vjnv8v"]
+[gd_scene load_steps=7 format=3 uid="uid://bdaw3p0vjnv8v"]
 
 [ext_resource type="Script" uid="uid://ccwawx32rscp1" path="res://scripts/ShopUI.gd" id="1_c4gkw"]
+[ext_resource type="Script" uid="uid://bl7pr5mdgor1u" path="res://scripts/ShopItemButton.gd" id="2_1u5rt"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_oihw3"]
 bg_color = Color(0.2, 0.2, 0.2, 0.8)
@@ -100,6 +101,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_m2n3i")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_nj2dl")
 theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
 text = "Character 1"
+script = ExtResource("2_1u5rt")
 
 [node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot1"]
 layout_mode = 1
@@ -124,6 +126,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_m2n3i")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_nj2dl")
 theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
 text = "Character 2"
+script = ExtResource("2_1u5rt")
 
 [node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot2"]
 layout_mode = 1
@@ -148,6 +151,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_m2n3i")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_nj2dl")
 theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
 text = "Character 3"
+script = ExtResource("2_1u5rt")
 
 [node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot3"]
 layout_mode = 1
@@ -172,6 +176,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_m2n3i")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_nj2dl")
 theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
 text = "Character 4"
+script = ExtResource("2_1u5rt")
 
 [node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot4"]
 layout_mode = 1
@@ -196,6 +201,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_m2n3i")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_nj2dl")
 theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
 text = "Character 5"
+script = ExtResource("2_1u5rt")
 
 [node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot5"]
 layout_mode = 1

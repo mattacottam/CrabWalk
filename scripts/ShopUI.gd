@@ -33,6 +33,14 @@ func _ready():
 	
 	# Initial shop roll
 	roll_shop()
+	
+	# Set mouse filter for parent Control
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	
+	# Find all buttons and set their mouse filters
+	for child in get_children():
+		if child is Button:
+			child.mouse_filter = Control.MOUSE_FILTER_STOP
 
 # Set up the shop slot buttons
 func setup_shop_slots():

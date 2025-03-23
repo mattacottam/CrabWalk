@@ -11,6 +11,22 @@ extends Control
 var player: Node
 
 func _ready():
+	# Set this control to capture input
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	
+	# Find all buttons and set their mouse filters too
+	for child in get_children():
+		if child is Button:
+			child.mouse_filter = Control.MOUSE_FILTER_STOP
+			print("Fixed button: ", child.name)
+		elif child is Control:
+			child.mouse_filter = Control.MOUSE_FILTER_STOP
+			# Look for nested buttons
+			for subchild in child.get_children():
+				if subchild is Button:
+					subchild.mouse_filter = Control.MOUSE_FILTER_STOP
+					print("Fixed nested button: ", subchild.name)
+	
 	# Find the player node correctly
 	player = get_node("/root/GameBoard/Player")
 	

@@ -1,108 +1,73 @@
-extends Area3D
-
-# References
-var player: Node
-var camera: Camera3D
+extends Node3D
 
 # Visual properties
-var default_color: Color = Color(0.8, 0.1, 0.1, 0.5)  # Red semi-transparent
-var highlight_color: Color = Color(1.0, 0.3, 0.3, 0.7)  # Brighter red when unit is over
+@onready var mesh_instance = $MeshInstance3D
 
-# UI elements
-var sell_label: Label3D
+var default_color = Color(0.8, 0.2, 0.2, 0.3)  # Semi-transparent red
+var active_color = Color(1.0, 0.0, 0.0, 0.5)   # Brighter, more solid red when active
 
+# Called when the node enters the scene tree
 func _ready():
-	camera = get_viewport().get_camera_3d()
-	player = get_node_or_null("/root/GameBoard/Player")
+	setup_appearance()
+	ensure_proper_collision()
+
+# Ensure proper collision setup
+func ensure_proper_collision():
+	# Check if we have a static body
+	var static_body = $MeshInstance3D/StaticBody3D
+	if not static_body:
+		static_body = StaticBody3D.new()
+		static_body.name = "StaticBody3D"
+		$MeshInstance3D.add_child(static_body)
 	
-	if not player:
-		push_error("SellZone: Could not find Player node")
+	# Check if we have a collision shape
+	var collision_shape = static_body.get_node_or_null("CollisionShape3D")
+	if not collision_shape:
+		collision_shape = CollisionShape3D.new()
+		collision_shape.name = "CollisionShape3D"
+		static_body.add_child(collision_shape)
 	
-	# Set up visual representation (mesh)
-	var mesh_instance = MeshInstance3D.new()
-	var cylinder = CylinderMesh.new()
-	cylinder.top_radius = 2.0
-	cylinder.bottom_radius = 2.0
-	cylinder.height = 0.1
-	mesh_instance.mesh = cylinder
-	add_child(mesh_instance)
+	# Make sure the shape is proper
+	var box_shape = BoxShape3D.new()
+	box_shape.size = Vector3(3, 0.1, 3)  # Match the mesh size
+	collision_shape.shape = box_shape
 	
-	# Create material
+	# Make sure collision is properly set up
+	static_body.collision_layer = 2  # Use a different layer than characters
+	static_body.collision_mask = 0
+
+# Set up the visual appearance of the sell zone
+func setup_appearance():
+	if not mesh_instance:
+		mesh_instance = MeshInstance3D.new()
+		add_child(mesh_instance)
+		
+		# Create mesh (simple plane with some size)
+		var plane_mesh = PlaneMesh.new()
+		plane_mesh.size = Vector2(3, 3)  # Adjust size as needed
+		mesh_instance.mesh = plane_mesh
+	
+	# Create and apply the material
 	var material = StandardMaterial3D.new()
 	material.albedo_color = default_color
 	material.emission_enabled = true
-	material.emission = default_color
-	material.emission_energy_multiplier = 0.3
+	material.emission = Color(0.8, 0.2, 0.2)
+	material.emission_energy_multiplier = 0.5
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mesh_instance.material_override = material
 	
-	# Add 3D text label
-	sell_label = Label3D.new()
-	sell_label.text = "SELL"
-	sell_label.font_size = 128
-	sell_label.position = Vector3(0, 1, 0)
-	sell_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	add_child(sell_label)
-	
-	# Connect signals
-	body_entered.connect(_on_body_entered)
-	body_exited.connect(_on_body_exited)
+	# Print debug info
+	print("SellZone setup complete")
 
-# When a unit enters the sell zone
-func _on_body_entered(body):
-	if body.is_dragging and body.has_method("get_character_data"):
-		# Highlight the sell zone
-		highlight()
+# Highlight when unit is hovering over the zone
+func highlight_active():
+	if mesh_instance and mesh_instance.material_override:
+		mesh_instance.material_override.albedo_color = active_color
+		mesh_instance.material_override.emission_energy_multiplier = 1.0
+		print("SellZone highlighted")
 
-# When a unit exits the sell zone
-func _on_body_exited(_body):
-	# Return to default appearance
-	reset_highlight()
-
-# Handle unit dropping in the sell zone
-func handle_unit_drop(unit) -> bool:
-	# Only sell if we have a player reference
-	if player and unit.has_method("get_character_data"):
-		var character_data = unit.get_character_data()
-		if character_data:
-			# Sell the character and get gold
-			player.sell_character(character_data)
-			
-			# Play sell effect
-			play_sell_effect()
-			
-			# Reset visual state
-			reset_highlight()
-			return true
-	
-	return false
-
-# Play a visual effect when selling
-func play_sell_effect():
-	# Flash the sell zone
-	var material = get_child(0).material_override
-	var original_emission = material.emission
-	var original_energy = material.emission_energy_multiplier
-	
-	material.emission = Color(1, 1, 1, 1)
-	material.emission_energy_multiplier = 1.0
-	
-	# Reset after a short time
-	await get_tree().create_timer(0.3).timeout
-	
-	material.emission = original_emission
-	material.emission_energy_multiplier = original_energy
-
-# Highlight the sell zone
-func highlight():
-	var material = get_child(0).material_override
-	material.albedo_color = highlight_color
-	material.emission = highlight_color
-	material.emission_energy_multiplier = 0.5
-
-# Reset highlight
+# Reset highlight when unit leaves
 func reset_highlight():
-	var material = get_child(0).material_override
-	material.albedo_color = default_color
-	material.emission = default_color
-	material.emission_energy_multiplier = 0.3
+	if mesh_instance and mesh_instance.material_override:
+		mesh_instance.material_override.albedo_color = default_color
+		mesh_instance.material_override.emission_energy_multiplier = 0.5

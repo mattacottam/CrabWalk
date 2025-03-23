@@ -1,0 +1,28 @@
+[gd_scene load_steps=5 format=3 uid="uid://mjf2rbtd4a2c"]
+
+[ext_resource type="Script" uid="uid://dq7ad2fd4ibkk" path="res://scripts/SellZone.gd" id="1_n2c1y"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_x74ys"]
+size = Vector2(3, 3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_t4j0q"]
+transparency = 1
+albedo_color = Color(0.8, 0.2, 0.2, 0.3)
+emission_enabled = true
+emission = Color(0.8, 0.2, 0.2, 1)
+emission_energy_multiplier = 0.5
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_7v1r3"]
+size = Vector3(3, 0.1, 3)
+
+[node name="SellZone" type="Node3D"]
+script = ExtResource("1_n2c1y")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_x74ys")
+surface_material_override/0 = SubResource("StandardMaterial3D_t4j0q")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="MeshInstance3D"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MeshInstance3D/StaticBody3D"]
+shape = SubResource("BoxShape3D_7v1r3")

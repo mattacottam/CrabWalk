@@ -6,16 +6,6 @@ extends Node3D
 @onready var enemy_arena = $EnemyArena
 @onready var bench = $Bench
 
-# Game systems
-@onready var character_database = $CharacterDatabase
-@onready var player = $Player
-@onready var unit_spawner = $UnitSpawner
-@onready var sell_zone = $SellZone
-
-# UI components
-@onready var player_ui = $CanvasLayer/PlayerUI
-@onready var shop_ui = $CanvasLayer/ShopUI
-
 # Dimensions for each section
 const PLAYER_ROWS = 7
 const PLAYER_COLS = 4
@@ -56,23 +46,21 @@ var invalid_placement_color = Color(1.0, 0.0, 0.0, 0.5)  # Red
 var tiles = {}
 var highlighted_tile = null
 
+# Sell zone reference
+var sell_zone
+
 # Called when the node enters the scene tree for the first time
 func _ready():
-	# Initialize game systems first
-	initialize_systems()
-	
-	# Generate board
 	generate_player_arena()
 	generate_middle_zone()
 	generate_enemy_arena()
 	generate_bench()
 	
-	# Create sell zone if it doesn't exist
-	if not sell_zone:
-		var sell_zone_scene = load("res://scenes/objects/SellZone.tscn")
-		sell_zone = sell_zone_scene.instantiate()
-		add_child(sell_zone)
-		sell_zone.position = Vector3(-5, 0, 9)  # Position near the board
+	# Create the sell zone
+	create_sell_zone()
+	
+	# Debug tile dictionary
+	print("Tile dictionary contains " + str(tiles.size()) + " tiles")
 	
 	# Position the camera to view the entire board
 	setup_camera()
@@ -80,50 +68,29 @@ func _ready():
 	# Enable physics process for smooth camera movement
 	set_physics_process(true)
 
-# Initialize game systems
-func initialize_systems():
-	# Create CharacterDatabase if it doesn't exist
-	if not character_database:
-		character_database = Node.new()
-		character_database.name = "CharacterDatabase"
-		add_child(character_database)
-		
-		# Attach script
-		var database_script = load("res://scripts/CharacterDatabase.gd")
-		character_database.set_script(database_script)
-	
-	# Create Player if it doesn't exist
-	if not player:
-		player = Node.new()
-		player.name = "Player"
-		add_child(player)
-		
-		# Attach script
-		var player_script = load("res://scripts/Player.gd")
-		player.set_script(player_script)
-	
-	# Create UI Canvas Layer if it doesn't exist
-	var canvas_layer = get_node_or_null("CanvasLayer")
-	if not canvas_layer:
-		canvas_layer = CanvasLayer.new()
-		canvas_layer.name = "CanvasLayer"
-		add_child(canvas_layer)
-		
-		# Add Player UI
-		var player_ui_scene = load("res://scenes/ui/PlayerUI.tscn")
-		player_ui = player_ui_scene.instantiate()
-		canvas_layer.add_child(player_ui)
-		
-		# Add Shop UI
-		var shop_ui_scene = load("res://scenes/ui/ShopUI.tscn")
-		shop_ui = shop_ui_scene.instantiate()
-		canvas_layer.add_child(shop_ui)
-
 # Process camera movement with smooth interpolation
 func _physics_process(delta):
 	if camera and camera.position != camera_target_position:
 		# Smoothly interpolate camera position
 		camera.position = camera.position.lerp(camera_target_position, delta * 5.0)
+
+# Create the sell zone area
+func create_sell_zone():
+	# Use only the SellZone from the UI folder
+	var sell_zone_scene = load("res://scenes/ui/SellZone.tscn")
+	
+	if sell_zone_scene:
+		sell_zone = sell_zone_scene.instantiate()
+		add_child(sell_zone)
+		
+		# Position the sell zone to the left of the bench
+		sell_zone.position = Vector3(
+			-5,  # To the left of the board
+			0.05,  # Slightly above the board to avoid z-fighting
+			(PLAYER_ROWS + 1) * HEX_VERT_SPACING  # Same Z position as bench
+		)
+	else:
+		print("ERROR: Could not load SellZone scene from res://scenes/ui/SellZone.tscn")
 
 # Generates the player's hex grid (7x4)
 func generate_player_arena():
@@ -240,48 +207,67 @@ func generate_bench():
 
 # Helper to create a hex tile with the given color
 func create_hex_tile(color):
-	# Create a new mesh instance for the hex
-	var hex_instance = MeshInstance3D.new()
-	hex_instance.name = "HexTile"
+	# Load the HexTile scene
+	var hex_scene = load("res://scenes/objects/HexTile.tscn")
 	
-	# Create a cylinder mesh with 6 sides to make a hexagon
-	var cylinder_mesh = CylinderMesh.new()
-	cylinder_mesh.top_radius = HEX_SIZE
-	cylinder_mesh.bottom_radius = HEX_SIZE
-	cylinder_mesh.height = HEX_HEIGHT
-	cylinder_mesh.radial_segments = 6
-	
-	hex_instance.mesh = cylinder_mesh
-	
-	# Setup material
-	var material = StandardMaterial3D.new()
-	material.albedo_color = color
-	hex_instance.material_override = material
-	
-	# Add collision with clean setup
-	var static_body = StaticBody3D.new()
-	static_body.name = "StaticBody3D"
-	hex_instance.add_child(static_body)
-	
-	var collision_shape = CollisionShape3D.new()
-	collision_shape.name = "CollisionShape3D"
-	var shape = CylinderShape3D.new()
-	shape.radius = HEX_SIZE
-	shape.height = HEX_HEIGHT
-	collision_shape.shape = shape
-	static_body.add_child(collision_shape)
-	
-	# Store the color as metadata
-	hex_instance.set_meta("color", color)
-	
-	# Attach the script - make sure path is correct
-	var script = load("res://scripts/HexTile.gd")
-	if script:
-		hex_instance.set_script(script)
+	if hex_scene:
+		var hex_instance = hex_scene.instantiate()
+		
+		# Set the color
+		if hex_instance.material_override:
+			hex_instance.material_override.albedo_color = color
+		else:
+			var material = StandardMaterial3D.new()
+			material.albedo_color = color
+			hex_instance.material_override = material
+		
+		# Store the color as metadata
+		hex_instance.set_meta("color", color)
+		
+		return hex_instance
 	else:
-		push_error("ERROR: Could not load HexTile script!")
-	
-	return hex_instance
+		# Create a new mesh instance for the hex
+		var hex_instance = MeshInstance3D.new()
+		hex_instance.name = "HexTile"
+		
+		# Create a cylinder mesh with 6 sides to make a hexagon
+		var cylinder_mesh = CylinderMesh.new()
+		cylinder_mesh.top_radius = HEX_SIZE
+		cylinder_mesh.bottom_radius = HEX_SIZE
+		cylinder_mesh.height = HEX_HEIGHT
+		cylinder_mesh.radial_segments = 6
+		
+		hex_instance.mesh = cylinder_mesh
+		
+		# Setup material
+		var material = StandardMaterial3D.new()
+		material.albedo_color = color
+		hex_instance.material_override = material
+		
+		# Add collision with clean setup
+		var static_body = StaticBody3D.new()
+		static_body.name = "StaticBody3D"
+		hex_instance.add_child(static_body)
+		
+		var collision_shape = CollisionShape3D.new()
+		collision_shape.name = "CollisionShape3D"
+		var shape = CylinderShape3D.new()
+		shape.radius = HEX_SIZE
+		shape.height = HEX_HEIGHT
+		collision_shape.shape = shape
+		static_body.add_child(collision_shape)
+		
+		# Store the color as metadata
+		hex_instance.set_meta("color", color)
+		
+		# Attach the script - make sure path is correct
+		var script = load("res://scripts/HexTile.gd")
+		if script:
+			hex_instance.set_script(script)
+		else:
+			print("ERROR: Could not load HexTile script!")
+		
+		return hex_instance
 
 # Set up the camera to view the entire board
 func setup_camera():
@@ -373,3 +359,29 @@ func clear_highlight():
 	if highlighted_tile:
 		highlighted_tile.reset_highlight()
 		highlighted_tile = null
+
+func _input(event):
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var mouse_pos = get_viewport().get_mouse_position()
+		print("Mouse click at: ", mouse_pos)
+		
+		# Print UI nodes under mouse
+		var ui_nodes = _get_ui_nodes_at_position(mouse_pos)
+		print("UI nodes under mouse: ", ui_nodes.size())
+		for node in ui_nodes:
+			print("- ", node.name, " (", node.get_class(), ")")
+
+# Get all UI nodes at a position
+func _get_ui_nodes_at_position(position):
+	var result = []
+	var root = get_tree().root
+	_recursive_get_control_nodes_at_position(root, position, result)
+	return result
+
+# Recursively collect all Control nodes at a position
+func _recursive_get_control_nodes_at_position(node, position, result):
+	if node is Control and node.get_global_rect().has_point(position) and node.visible:
+		result.append(node)
+	
+	for child in node.get_children():
+		_recursive_get_control_nodes_at_position(child, position, result)

@@ -1,7 +1,7 @@
 extends CharacterBody3D
 
-# Character data reference
-var character_data: Character = null
+# Character data
+var character_data = null
 
 # Drag and drop properties
 var is_dragging = false
@@ -12,38 +12,38 @@ var original_position = Vector3.ZERO
 var original_tile = null
 var original_y = 0  # Store original height
 
-# References to game objects
+# Maximum distance for hex tile snapping
+const MAX_SNAP_DISTANCE = 5.0  # Adjust as needed
+
+# Reference to the board and sell zone
 var board = null
 var sell_zone = null
 
 # Animation references
-@onready var animation_player: AnimationPlayer = $Armature/AnimationPlayer
-const IDLE_ANIM = "Unarmed_Idle/mixamo_com" # Use the actual animation name from your character
-const DRAG_ANIM = "Fall_and_Loop/mixamo_com" # Use the actual animation name from your character
+@onready var animation_player = $Armature/AnimationPlayer if has_node("Armature/AnimationPlayer") else null
+const IDLE_ANIM = "Unarmed_Idle/mixamo_com"
+const DRAG_ANIM = "Fall_and_Loop/mixamo_com"
 
-# Visual elements
-var model: Node3D
-var health_bar: ProgressBar3D
+# Collision shape for better click detection
+var collision_shape
 
 func _ready():
-	if animation_player:
-		print("Available animations:")
-		for anim in animation_player.get_animation_list():
-			print("- " + anim)
-	
 	# Find the board in the scene
 	board = get_node("/root/GameBoard")
 	
+	# Find the sell zone
+	sell_zone = get_node_or_null("/root/GameBoard/SellZone")
+	
+	# Create a collision shape if none exists
+	ensure_collision()
+	
 	if board:
-		# Find the sell zone
-		sell_zone = get_node_or_null("/root/GameBoard/SellZone")
-		
 		# Store our starting tile
 		original_tile = board.get_tile_at_position(global_position)
 		if original_tile:
 			original_tile.set_occupying_unit(self)
 	else:
-		push_error("WARNING: Board reference not found!")
+		print("WARNING: Board reference not found!")
 	
 	# Create a plane for drag calculations
 	drag_plane = Plane(Vector3.UP, 0)
@@ -51,102 +51,77 @@ func _ready():
 	# Start idle animation
 	if animation_player:
 		animation_player.play(IDLE_ANIM)
-	
-	# Setup health bar and other visuals based on character data
-	setup_visuals()
+	else:
+		print("WARNING: Animation player not found!")
 
-# Set character data
-func set_character_data(data: Character):
+# Ensure there's a proper collision shape for clicking
+func ensure_collision():
+	if not has_node("CollisionShape3D"):
+		collision_shape = CollisionShape3D.new()
+		collision_shape.name = "CollisionShape3D"
+		
+		var shape = CapsuleShape3D.new()
+		shape.radius = 0.5
+		shape.height = 2.0
+		
+		collision_shape.shape = shape
+		collision_shape.position = Vector3(0, 1.0, 0)  # Center vertically on character
+		
+		add_child(collision_shape)
+		
+		# Make sure collision is enabled
+		collision_layer = 1
+		collision_mask = 0  # Don't need the character to detect collisions, just be clickable
+
+# Set character data (called by shop system)
+func set_character_data(data):
 	character_data = data
-	setup_visuals()
+	print("Character data set successfully")
 
 # Get character data
-func get_character_data() -> Character:
+func get_character_data():
 	return character_data
 
-# Setup visual elements based on character data
-func setup_visuals():
-	if character_data:
-		# Set up health bar
-		if not health_bar:
-			# Create 3D health bar above character
-			health_bar = ProgressBar3D.new()
-			health_bar.size = Vector3(1.0, 0.1, 0.1)
-			health_bar.position = Vector3(0, 2.0, 0)
-			add_child(health_bar)
-		
-		# Set health
-		health_bar.max_value = character_data.health
-		health_bar.value = character_data.health
-		
-		# You could also change the model or add other visual elements here
-		# based on the character data (rarity glow, etc.)
-		
-		# Add a glow based on rarity
-		add_rarity_glow()
-
-# Add a glow effect based on character rarity
-func add_rarity_glow():
-	if character_data:
-		# Create a glow effect as a mesh
-		var glow = MeshInstance3D.new()
-		glow.name = "RarityGlow"
-		
-		# Create a cylinder mesh as the glow
-		var cylinder_mesh = CylinderMesh.new()
-		cylinder_mesh.top_radius = 0.8
-		cylinder_mesh.bottom_radius = 0.8
-		cylinder_mesh.height = 0.05
-		glow.mesh = cylinder_mesh
-		
-		# Position at the character's feet
-		glow.position = Vector3(0, 0.03, 0)
-		
-		# Create material with emission based on rarity
-		var material = StandardMaterial3D.new()
-		material.albedo_color = character_data.get_rarity_color()
-		material.emission_enabled = true
-		material.emission = character_data.get_rarity_color()
-		material.emission_energy_multiplier = 0.5
-		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		glow.material_override = material
-		
-		add_child(glow)
-
-func _input(event):
-	if not board:
-		return
-		
+func _unhandled_input(event):
+	# Only process input if not being handled by UI
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
 				# Check if this unit was clicked
 				var ray_result = get_mouse_collision()
 				
-				if ray_result and ray_result.collider == self:
+				if ray_result and (ray_result.collider == self or ray_result.collider.get_parent() == self):
 					start_drag(event.position)
-					
+			
 			elif is_dragging:
 				end_drag()
-				
+	
 	elif event is InputEventMouseMotion and is_dragging:
 		update_drag_position(event.position)
+
 
 func get_mouse_collision():
 	# Get the mouse position in 3D space
 	var camera = get_viewport().get_camera_3d()
+	if not camera:
+		print("No camera found")
+		return null
+		
 	var mouse_pos = get_viewport().get_mouse_position()
 	var ray_origin = camera.project_ray_origin(mouse_pos)
 	var ray_end = ray_origin + camera.project_ray_normal(mouse_pos) * 1000
 	
 	# Set up physics query
 	var query = PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
+	query.collide_with_areas = true
+	query.collide_with_bodies = true
 	
 	# Do the raycast
 	var space_state = get_world_3d().direct_space_state
 	return space_state.intersect_ray(query)
 
 func start_drag(mouse_pos):
+	print("Starting drag")
 	is_dragging = true
 	
 	# Save our starting position and tile
@@ -183,30 +158,41 @@ func update_drag_position(mouse_pos):
 	if intersection:
 		global_position = intersection + drag_offset
 		
-		# Show potential placement
-		var closest_tile = board.get_closest_tile(global_position)
-		if closest_tile:
-			board.highlight_potential_drop(closest_tile)
+		# Check if we're over the sell zone
+		var over_sell_zone = is_over_sell_zone()
+		
+		# Show potential placement or sell highlight
+		if over_sell_zone:
+			if sell_zone:
+				sell_zone.highlight_active()
+			board.clear_highlight()
+		else:
+			if sell_zone:
+				sell_zone.reset_highlight()
+			var closest_tile = board.get_closest_tile(global_position)
+			if closest_tile:
+				# Only highlight if within maximum snap distance
+				var distance = global_position.distance_to(closest_tile.global_position) 
+				if distance <= MAX_SNAP_DISTANCE:
+					board.highlight_potential_drop(closest_tile)
+				else:
+					board.clear_highlight()
 
 func end_drag():
+	print("End drag")
 	is_dragging = false
 	
-	# Check if unit is over the sell zone
-	if sell_zone and sell_zone.get_overlapping_bodies().has(self):
-		# Sell the unit and remove it
-		if sell_zone.handle_unit_drop(self):
-			# Clean up original tile reference
-			if original_tile:
-				original_tile.set_occupying_unit(null)
-			
-			# Remove the unit
-			queue_free()
-			return
+	# Check if the unit is over the sell zone
+	if is_over_sell_zone():
+		sell_unit()
+		return
 	
 	# Find the closest tile
 	var target_tile = board.get_closest_tile(global_position)
+	var distance_to_target = global_position.distance_to(target_tile.global_position)
 	
-	if target_tile and board.is_valid_placement_zone(target_tile):
+	# Check if the tile is within range and in a valid zone
+	if target_tile and distance_to_target <= MAX_SNAP_DISTANCE and board.is_valid_placement_zone(target_tile):
 		var occupying_unit = target_tile.get_occupying_unit()
 		
 		if occupying_unit and occupying_unit != self:
@@ -216,15 +202,58 @@ func end_drag():
 			# Move to the new tile
 			snap_to_tile(target_tile)
 	else:
-		# Return to original position if target is invalid
+		# Return to original position if target is invalid or too far
 		global_position = original_position
 	
-	# Clear highlight
+	# Clear highlights
 	board.clear_highlight()
+	if sell_zone:
+		sell_zone.reset_highlight()
 	
 	# Return to idle animation with crossfade
 	if animation_player:
 		animation_player.play(IDLE_ANIM, 0.3)  # 0.3 seconds crossfade time
+
+func is_over_sell_zone():
+	if not sell_zone:
+		print("No sell zone found")
+		return false
+	
+	# Check if we're close to the sell zone's position using distance comparison
+	var distance = global_position.distance_to(sell_zone.global_position)
+	
+	# If we're within 2 units of the sell zone's center, consider it a hit
+	if distance < 2.0:
+		print("Over sell zone, distance: ", distance)
+		return true
+	
+	print("Not over sell zone, distance: ", distance)
+	return false
+
+func sell_unit():
+	print("Selling unit")
+	
+	# Tell the original tile we're no longer there
+	if original_tile:
+		original_tile.set_occupying_unit(null)
+	
+	# Update player gold (assuming you have a Player singleton or similar)
+	var player = get_node_or_null("/root/GameBoard/Player")
+	if player:
+		# Get sell value based on character_data if available
+		var sell_value = 3  # Default value
+		if character_data != null:
+			# Safely check if we can access cost property
+			if typeof(character_data) == TYPE_OBJECT and character_data.get("cost") != null:
+				sell_value = character_data.cost
+			# If it's a dictionary
+			elif typeof(character_data) == TYPE_DICTIONARY and "cost" in character_data:
+				sell_value = character_data["cost"]
+		
+		player.add_gold(sell_value)
+	
+	# Delete the unit
+	queue_free()
 
 func swap_with_unit(other_unit, target_tile):
 	# Move other unit to our original position/tile
