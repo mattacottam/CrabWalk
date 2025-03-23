@@ -6,6 +6,16 @@ extends Node3D
 @onready var enemy_arena = $EnemyArena
 @onready var bench = $Bench
 
+# Game systems
+@onready var character_database = $CharacterDatabase
+@onready var player = $Player
+@onready var unit_spawner = $UnitSpawner
+@onready var sell_zone = $SellZone
+
+# UI components
+@onready var player_ui = $CanvasLayer/PlayerUI
+@onready var shop_ui = $CanvasLayer/ShopUI
+
 # Dimensions for each section
 const PLAYER_ROWS = 7
 const PLAYER_COLS = 4
@@ -48,23 +58,66 @@ var highlighted_tile = null
 
 # Called when the node enters the scene tree for the first time
 func _ready():
+	# Initialize game systems first
+	initialize_systems()
+	
+	# Generate board
 	generate_player_arena()
 	generate_middle_zone()
 	generate_enemy_arena()
 	generate_bench()
 	
-	# Debug tile dictionary
-	print("Tile dictionary contains " + str(tiles.size()) + " tiles")
-	print("Bench tiles:")
-	for i in range(BENCH_SPACES):
-		var key = "bench_%d" % i
-		print("- " + key + ": " + str(tiles.has(key)))
+	# Create sell zone if it doesn't exist
+	if not sell_zone:
+		var sell_zone_scene = load("res://scenes/objects/SellZone.tscn")
+		sell_zone = sell_zone_scene.instantiate()
+		add_child(sell_zone)
+		sell_zone.position = Vector3(-5, 0, 9)  # Position near the board
 	
 	# Position the camera to view the entire board
 	setup_camera()
 	
 	# Enable physics process for smooth camera movement
 	set_physics_process(true)
+
+# Initialize game systems
+func initialize_systems():
+	# Create CharacterDatabase if it doesn't exist
+	if not character_database:
+		character_database = Node.new()
+		character_database.name = "CharacterDatabase"
+		add_child(character_database)
+		
+		# Attach script
+		var database_script = load("res://scripts/CharacterDatabase.gd")
+		character_database.set_script(database_script)
+	
+	# Create Player if it doesn't exist
+	if not player:
+		player = Node.new()
+		player.name = "Player"
+		add_child(player)
+		
+		# Attach script
+		var player_script = load("res://scripts/Player.gd")
+		player.set_script(player_script)
+	
+	# Create UI Canvas Layer if it doesn't exist
+	var canvas_layer = get_node_or_null("CanvasLayer")
+	if not canvas_layer:
+		canvas_layer = CanvasLayer.new()
+		canvas_layer.name = "CanvasLayer"
+		add_child(canvas_layer)
+		
+		# Add Player UI
+		var player_ui_scene = load("res://scenes/ui/PlayerUI.tscn")
+		player_ui = player_ui_scene.instantiate()
+		canvas_layer.add_child(player_ui)
+		
+		# Add Shop UI
+		var shop_ui_scene = load("res://scenes/ui/ShopUI.tscn")
+		shop_ui = shop_ui_scene.instantiate()
+		canvas_layer.add_child(shop_ui)
 
 # Process camera movement with smooth interpolation
 func _physics_process(delta):
@@ -226,7 +279,7 @@ func create_hex_tile(color):
 	if script:
 		hex_instance.set_script(script)
 	else:
-		print("ERROR: Could not load HexTile script!")
+		push_error("ERROR: Could not load HexTile script!")
 	
 	return hex_instance
 

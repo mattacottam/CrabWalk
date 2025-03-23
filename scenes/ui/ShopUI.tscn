@@ -1,0 +1,232 @@
+[gd_scene load_steps=6 format=3 uid="uid://bdaw3p0vjnv8v"]
+
+[ext_resource type="Script" uid="uid://ccwawx32rscp1" path="res://scripts/ShopUI.gd" id="1_c4gkw"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_oihw3"]
+bg_color = Color(0.2, 0.2, 0.2, 0.8)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_m2n3i"]
+bg_color = Color(0.3, 0.3, 0.3, 0.8)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8, 0.8, 0.8, 0.4)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nj2dl"]
+bg_color = Color(0.4, 0.4, 0.4, 0.8)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 1, 1, 0.6)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_t467i"]
+bg_color = Color(0.2, 0.2, 0.2, 0.8)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8, 0.8, 0.8, 0.2)
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[node name="ShopUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_c4gkw")
+
+[node name="ShopContainer" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -400.0
+offset_top = -120.0
+offset_right = 400.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_oihw3")
+
+[node name="ShopLabel" type="Label" parent="ShopContainer"]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 90.0
+offset_bottom = 31.0
+theme_override_font_sizes/font_size = 16
+text = "SHOP"
+
+[node name="ShopSlots" type="HBoxContainer" parent="ShopContainer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 30.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 15
+alignment = 1
+
+[node name="ShopSlot1" type="Button" parent="ShopContainer/ShopSlots"]
+custom_minimum_size = Vector2(140, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_styles/hover = SubResource("StyleBoxFlat_m2n3i")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_nj2dl")
+theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
+text = "Character 1"
+
+[node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot1"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -26.0
+offset_right = 20.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "1g"
+horizontal_alignment = 1
+
+[node name="ShopSlot2" type="Button" parent="ShopContainer/ShopSlots"]
+custom_minimum_size = Vector2(140, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_styles/hover = SubResource("StyleBoxFlat_m2n3i")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_nj2dl")
+theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
+text = "Character 2"
+
+[node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot2"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -26.0
+offset_right = 20.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "1g"
+horizontal_alignment = 1
+
+[node name="ShopSlot3" type="Button" parent="ShopContainer/ShopSlots"]
+custom_minimum_size = Vector2(140, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_styles/hover = SubResource("StyleBoxFlat_m2n3i")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_nj2dl")
+theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
+text = "Character 3"
+
+[node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot3"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -26.0
+offset_right = 20.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "1g"
+horizontal_alignment = 1
+
+[node name="ShopSlot4" type="Button" parent="ShopContainer/ShopSlots"]
+custom_minimum_size = Vector2(140, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_styles/hover = SubResource("StyleBoxFlat_m2n3i")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_nj2dl")
+theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
+text = "Character 4"
+
+[node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot4"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -26.0
+offset_right = 20.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "1g"
+horizontal_alignment = 1
+
+[node name="ShopSlot5" type="Button" parent="ShopContainer/ShopSlots"]
+custom_minimum_size = Vector2(140, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+theme_override_styles/hover = SubResource("StyleBoxFlat_m2n3i")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_nj2dl")
+theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
+text = "Character 5"
+
+[node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot5"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -20.0
+offset_top = -26.0
+offset_right = 20.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "1g"
+horizontal_alignment = 1
+
+[node name="NotEnoughGoldLabel" type="Label" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = -15.0
+offset_right = 100.0
+offset_bottom = 15.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
+theme_override_font_sizes/font_size = 24
+text = "Not enough gold!"
+horizontal_alignment = 1

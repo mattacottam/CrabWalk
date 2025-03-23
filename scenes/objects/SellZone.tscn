@@ -1,0 +1,16 @@
+[gd_scene load_steps=3 format=3 uid="uid://cp42r3obhdga7"]
+
+[ext_resource type="Script" uid="uid://dq7ad2fd4ibkk" path="res://scripts/SellZone.gd" id="1_6p82i"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_n8e2f"]
+radius = 2.0
+
+[node name="SellZone" type="Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 9)
+collision_layer = 2
+collision_mask = 2
+script = ExtResource("1_6p82i")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CylinderShape3D_n8e2f")

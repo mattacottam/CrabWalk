@@ -1,5 +1,8 @@
 extends CharacterBody3D
 
+# Character data reference
+var character_data: Character = null
+
 # Drag and drop properties
 var is_dragging = false
 var drag_height = 0.5  # Increased height for floating effect
@@ -9,25 +12,38 @@ var original_position = Vector3.ZERO
 var original_tile = null
 var original_y = 0  # Store original height
 
-# Reference to the board
+# References to game objects
 var board = null
+var sell_zone = null
 
 # Animation references
 @onready var animation_player: AnimationPlayer = $Armature/AnimationPlayer
-const IDLE_ANIM = "Unarmed_Idle/mixamo_com"
-const DRAG_ANIM = "Fall_and_Loop/mixamo_com"
+const IDLE_ANIM = "Unarmed_Idle/mixamo_com" # Use the actual animation name from your character
+const DRAG_ANIM = "Fall_and_Loop/mixamo_com" # Use the actual animation name from your character
+
+# Visual elements
+var model: Node3D
+var health_bar: ProgressBar3D
 
 func _ready():
+	if animation_player:
+		print("Available animations:")
+		for anim in animation_player.get_animation_list():
+			print("- " + anim)
+	
 	# Find the board in the scene
 	board = get_node("/root/GameBoard")
 	
 	if board:
+		# Find the sell zone
+		sell_zone = get_node_or_null("/root/GameBoard/SellZone")
+		
 		# Store our starting tile
 		original_tile = board.get_tile_at_position(global_position)
 		if original_tile:
 			original_tile.set_occupying_unit(self)
 	else:
-		print("WARNING: Board reference not found!")
+		push_error("WARNING: Board reference not found!")
 	
 	# Create a plane for drag calculations
 	drag_plane = Plane(Vector3.UP, 0)
@@ -35,6 +51,67 @@ func _ready():
 	# Start idle animation
 	if animation_player:
 		animation_player.play(IDLE_ANIM)
+	
+	# Setup health bar and other visuals based on character data
+	setup_visuals()
+
+# Set character data
+func set_character_data(data: Character):
+	character_data = data
+	setup_visuals()
+
+# Get character data
+func get_character_data() -> Character:
+	return character_data
+
+# Setup visual elements based on character data
+func setup_visuals():
+	if character_data:
+		# Set up health bar
+		if not health_bar:
+			# Create 3D health bar above character
+			health_bar = ProgressBar3D.new()
+			health_bar.size = Vector3(1.0, 0.1, 0.1)
+			health_bar.position = Vector3(0, 2.0, 0)
+			add_child(health_bar)
+		
+		# Set health
+		health_bar.max_value = character_data.health
+		health_bar.value = character_data.health
+		
+		# You could also change the model or add other visual elements here
+		# based on the character data (rarity glow, etc.)
+		
+		# Add a glow based on rarity
+		add_rarity_glow()
+
+# Add a glow effect based on character rarity
+func add_rarity_glow():
+	if character_data:
+		# Create a glow effect as a mesh
+		var glow = MeshInstance3D.new()
+		glow.name = "RarityGlow"
+		
+		# Create a cylinder mesh as the glow
+		var cylinder_mesh = CylinderMesh.new()
+		cylinder_mesh.top_radius = 0.8
+		cylinder_mesh.bottom_radius = 0.8
+		cylinder_mesh.height = 0.05
+		glow.mesh = cylinder_mesh
+		
+		# Position at the character's feet
+		glow.position = Vector3(0, 0.03, 0)
+		
+		# Create material with emission based on rarity
+		var material = StandardMaterial3D.new()
+		material.albedo_color = character_data.get_rarity_color()
+		material.emission_enabled = true
+		material.emission = character_data.get_rarity_color()
+		material.emission_energy_multiplier = 0.5
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		glow.material_override = material
+		
+		add_child(glow)
 
 func _input(event):
 	if not board:
@@ -113,6 +190,18 @@ func update_drag_position(mouse_pos):
 
 func end_drag():
 	is_dragging = false
+	
+	# Check if unit is over the sell zone
+	if sell_zone and sell_zone.get_overlapping_bodies().has(self):
+		# Sell the unit and remove it
+		if sell_zone.handle_unit_drop(self):
+			# Clean up original tile reference
+			if original_tile:
+				original_tile.set_occupying_unit(null)
+			
+			# Remove the unit
+			queue_free()
+			return
 	
 	# Find the closest tile
 	var target_tile = board.get_closest_tile(global_position)

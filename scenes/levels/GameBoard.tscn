@@ -1,8 +1,13 @@
-[gd_scene load_steps=8 format=3 uid="uid://ba833q1t0yowx"]
+[gd_scene load_steps=13 format=3 uid="uid://ba833q1t0yowx"]
 
 [ext_resource type="Script" uid="uid://cg5dl7gwb4ai4" path="res://scripts/GameBoard.gd" id="1_31iy7"]
+[ext_resource type="Script" uid="uid://y0i1bu2qc4wo" path="res://scripts/CharacterDatabase.gd" id="1_77p1f"]
 [ext_resource type="Script" uid="uid://c05jqm0sggv5r" path="res://scripts/UnitSpawner.gd" id="2_ac6wt"]
 [ext_resource type="Shader" path="res://assets/shaders/water.gdshader" id="3_ac6wt"]
+[ext_resource type="PackedScene" uid="uid://crm6y18r5xin6" path="res://scenes/ui/PlayerUI.tscn" id="4_77p1f"]
+[ext_resource type="PackedScene" uid="uid://bdaw3p0vjnv8v" path="res://scenes/ui/ShopUI.tscn" id="5_qfvow"]
+[ext_resource type="Script" uid="uid://cmvblyrj6dyho" path="res://scripts/Player.gd" id="6_qfvow"]
+[ext_resource type="PackedScene" uid="uid://cp42r3obhdga7" path="res://scenes/objects/SellZone.tscn" id="6_r5hcy"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_8hsy1"]
 size = Vector2(28, 20)
@@ -39,9 +44,22 @@ script = ExtResource("1_31iy7")
 
 [node name="Bench" type="Node3D" parent="."]
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.781444, 0.623975, 0, -0.623975, 0.781444, 10.7099, 4.86361, 20.7054)
-light_energy = 1.762
+[node name="Player" type="Node" parent="."]
+script = ExtResource("6_qfvow")
+
+[node name="CharacterDatabase" type="Node" parent="."]
+script = ExtResource("1_77p1f")
+
+[node name="SellZone" parent="." instance=ExtResource("6_r5hcy")]
+
+[node name="UnitSpawner" type="Node" parent="."]
+script = ExtResource("2_ac6wt")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="PlayerUI" parent="CanvasLayer" instance=ExtResource("4_77p1f")]
+
+[node name="ShopUI" parent="CanvasLayer" instance=ExtResource("5_qfvow")]
 
 [node name="BoardSurface" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, -0.15, 6)
@@ -57,10 +75,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -6.61261, 0)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="Environment"]
 
-[node name="UnitSpawner" type="Node" parent="."]
-script = ExtResource("2_ac6wt")
-
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
 transform = Transform3D(0.969284, 0, 0, 0, 0.727121, 0, 0, 0, 0.969284, 12.5134, -2, 0)
 mesh = SubResource("BoxMesh_33v6w")
 surface_material_override/0 = SubResource("ShaderMaterial_6m12s")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.781444, 0.623975, 0, -0.623975, 0.781444, 10.7099, 4.86361, 20.7054)
+light_energy = 1.762

@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="Character" load_steps=2 format=3 uid="uid://fmnhspdc0uj3"]
+
+[ext_resource type="Script" uid="uid://dt4hieyaspnol" path="res://resources/Character.gd" id="1_nvk43"]
+
+[resource]
+script = ExtResource("1_nvk43")
+id = "warrior"
+display_name = "Warrior"
+description = "A front-line fighter with high health and armor."
+health = 150
+attack_damage = 15
+attack_speed = 0.8
+range = 1
+armor = 20
+magic_resist = 10
+mana_max = 100
+movement_speed = 2.8
+rarity = 1
+cost = 1
+shop_weight = 1
+traits = ["Fighter", "Human"]
+ability_name = "Battle Cry"
+ability_description = "Increases armor for nearby allies for 5 seconds."
+ability_damage = 0
+ability_mana_cost = 75
