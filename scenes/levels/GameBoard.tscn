@@ -1,13 +1,32 @@
-[gd_scene load_steps=5 format=3 uid="uid://ba833q1t0yowx"]
+[gd_scene load_steps=8 format=3 uid="uid://ba833q1t0yowx"]
 
 [ext_resource type="Script" uid="uid://cg5dl7gwb4ai4" path="res://scripts/GameBoard.gd" id="1_31iy7"]
 [ext_resource type="Script" uid="uid://c05jqm0sggv5r" path="res://scripts/UnitSpawner.gd" id="2_ac6wt"]
+[ext_resource type="Shader" path="res://assets/shaders/water.gdshader" id="3_ac6wt"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_8hsy1"]
 size = Vector2(28, 20)
 
 [sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_prs8h"]
 points = PackedVector3Array(-14, 0, -10, -14, 0, 10, 14, 0, -10, 14, 0, 10)
+
+[sub_resource type="BoxMesh" id="BoxMesh_33v6w"]
+size = Vector3(200, 0.2, 200)
+subdivide_width = 1
+subdivide_height = 1
+subdivide_depth = 1
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_6m12s"]
+render_priority = 0
+shader = ExtResource("3_ac6wt")
+shader_parameter/WATER_COL = Color(0.04, 0.38, 0.88, 1)
+shader_parameter/WATER2_COL = Color(0.04, 0.35, 0.78, 1)
+shader_parameter/FOAM_COL = Color(0.8125, 0.9609, 0.9648, 1)
+shader_parameter/distortion_speed = 3.0
+shader_parameter/tile = Vector2(100, 100)
+shader_parameter/height = 2.0
+shader_parameter/wave_size = Vector2(1, 1)
+shader_parameter/wave_speed = 1.0
 
 [node name="GameBoard" type="Node3D"]
 script = ExtResource("1_31iy7")
@@ -40,3 +59,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -6.61261, 0)
 
 [node name="UnitSpawner" type="Node" parent="."]
 script = ExtResource("2_ac6wt")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.969284, 0, 0, 0, 0.727121, 0, 0, 0, 0.969284, 12.5134, -2, 0)
+mesh = SubResource("BoxMesh_33v6w")
+surface_material_override/0 = SubResource("ShaderMaterial_6m12s")
