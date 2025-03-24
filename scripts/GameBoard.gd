@@ -360,10 +360,6 @@ func clear_highlight():
 		highlighted_tile.reset_highlight()
 		highlighted_tile = null
 
-func _input(event):
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var mouse_pos = get_viewport().get_mouse_position()
-
 # Get all UI nodes at a position
 func _get_ui_nodes_at_position(position):
 	var result = []

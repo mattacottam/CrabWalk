@@ -28,12 +28,12 @@ func _ready():
 	# Find buttons - try multiple potential paths
 	buy_xp_button = find_node_by_name("BuyXPButton")
 	reroll_button = find_node_by_name("RerollButton")
-	not_enough_gold_label = find_node_by_name("NotEnoughGoldLabel")
 	
-	# Create not enough gold label if it doesn't exist
+	# We'll use a central error message only
+	not_enough_gold_label = get_node_or_null("/root/GameBoard/CentralMessageLabel")
 	if not not_enough_gold_label:
-		not_enough_gold_label = create_not_enough_gold_label()
-	
+		not_enough_gold_label = create_central_message_label()
+		
 	# Print found UI elements for debugging
 	print("PlayerUI elements found:")
 	print("- gold_label: ", gold_label != null)
@@ -89,23 +89,31 @@ func _ready():
 	# Connect button signals
 	_connect_buttons()
 
-# Create a not enough gold label if it doesn't exist
-func create_not_enough_gold_label() -> Label:
+# Create a central message label that will be used by all UI elements
+func create_central_message_label() -> Label:
+	var game_board = get_node("/root/GameBoard")
+	var canvas_layer = CanvasLayer.new()
+	canvas_layer.name = "MessageLayer"
+	canvas_layer.layer = 10 # Make sure it's on top
+	game_board.add_child.call_deferred(canvas_layer)
+	
 	var label = Label.new()
-	label.name = "NotEnoughGoldLabel"
+	label.name = "CentralMessageLabel"
 	label.text = "Not enough gold!"
 	label.add_theme_color_override("font_color", Color(1, 0.3, 0.3))  # Reddish color
+	label.add_theme_font_size_override("font_size", 24)  # Larger text
 	
 	# Set size and position
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.size = Vector2(200, 40)
-	label.position = Vector2(50, 200)  # Position it visible on screen
+	label.size = Vector2(300, 60)
+	label.position = Vector2((get_viewport().get_visible_rect().size.x - 300) / 2, 
+							 (get_viewport().get_visible_rect().size.y - 60) / 2)
 	
 	# Initially hidden
 	label.visible = false
 	
-	add_child(label)
+	canvas_layer.add_child(label)
 	return label
 
 # Recursively find a node by name in the scene

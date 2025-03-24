@@ -80,18 +80,3 @@ surface_material_override/0 = SubResource("ShaderMaterial_6m12s")
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.781444, 0.623975, 0, -0.623975, 0.781444, 10.7099, 4.86361, 20.7054)
 light_energy = 1.762
-
-[node name="MessageLayer" type="CanvasLayer" parent="."]
-layer = 10
-
-[node name="CentralMessageLabel" type="Label" parent="MessageLayer"]
-visible = false
-offset_left = 424.0
-offset_top = 285.0
-offset_right = 724.0
-offset_bottom = 345.0
-theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
-theme_override_font_sizes/font_size = 24
-text = "Not enough gold!"
-horizontal_alignment = 1
-vertical_alignment = 1

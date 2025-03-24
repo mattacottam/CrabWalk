@@ -38,11 +38,12 @@ func _ready():
 	
 	# Find UI elements with more robust search
 	reroll_button = find_node_by_name("RerollButton")
-	not_enough_gold_label = find_node_by_name("NotEnoughGoldLabel")
 	
-	# Create not enough gold label if it doesn't exist
+	# Use the central message label instead of a local one
+	not_enough_gold_label = get_node_or_null("/root/GameBoard/MessageLayer/CentralMessageLabel")
 	if not not_enough_gold_label:
-		not_enough_gold_label = create_not_enough_gold_label()
+		# The PlayerUI will create this, but if it doesn't exist yet we'll look for it later
+		print("Central message label not found, will use it if created later")
 	
 	print("ShopUI elements found:")
 	print("- reroll_button: ", reroll_button != null)
@@ -65,25 +66,6 @@ func _ready():
 	if reroll_button and not reroll_button.pressed.is_connected(_on_reroll_button_pressed):
 		reroll_button.pressed.connect(_on_reroll_button_pressed)
 		print("Connected reroll button")
-
-# Create a not enough gold label if it doesn't exist
-func create_not_enough_gold_label() -> Label:
-	var label = Label.new()
-	label.name = "NotEnoughGoldLabel"
-	label.text = "Not enough gold!"
-	label.add_theme_color_override("font_color", Color(1, 0.3, 0.3))  # Reddish color
-	
-	# Set size and position
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.size = Vector2(200, 40)
-	label.position = Vector2(200, 100)  # Position it visible on screen
-	
-	# Initially hidden
-	label.visible = false
-	
-	add_child(label)
-	return label
 
 # Recursively find a node by name in the scene
 func find_node_by_name(node_name: String) -> Node:
@@ -123,6 +105,11 @@ func find_node_in_children(parent: Node, node_name: String) -> Node:
 # Handle not enough gold signal
 func _on_not_enough_gold():
 	print("ShopUI: Not enough gold!")
+	
+	# Try to find the central message label if we don't have it yet
+	if not not_enough_gold_label:
+		not_enough_gold_label = get_node_or_null("/root/GameBoard/MessageLayer/CentralMessageLabel")
+	
 	if not_enough_gold_label:
 		not_enough_gold_label.visible = true
 		
@@ -247,6 +234,11 @@ func update_shop_display():
 		
 		if i < current_shop_options.size():
 			var char_id = current_shop_options[i]
+			if char_id.is_empty():
+				# Empty slot
+				display_empty_slot(slot)
+				continue
+				
 			var character = character_database.get_character(char_id)
 			
 			if character:
@@ -282,32 +274,25 @@ func update_shop_display():
 				slot.disabled = false
 			else:
 				# Empty slot if no character
-				slot.text = "Empty"
-				slot.disabled = true
-				
-				# Clear style
-				update_button_style(slot, "normal", Color(0.2, 0.2, 0.2, 0.8))
-				update_button_style(slot, "hover", Color(0.3, 0.3, 0.3, 0.8))
-				update_button_style(slot, "pressed", Color(0.4, 0.4, 0.4, 0.8))
-				
-				# Hide portrait if applicable
-				var portrait_node = slot.get_node_or_null("Portrait")
-				if portrait_node:
-					portrait_node.visible = false
+				display_empty_slot(slot)
 		else:
 			# Empty slot
-			slot.text = "Empty"
-			slot.disabled = true
-			
-			# Clear style
-			update_button_style(slot, "normal", Color(0.2, 0.2, 0.2, 0.8))
-			update_button_style(slot, "hover", Color(0.3, 0.3, 0.3, 0.8))
-			update_button_style(slot, "pressed", Color(0.4, 0.4, 0.4, 0.8))
-			
-			# Hide portrait if applicable
-			var portrait_node = slot.get_node_or_null("Portrait")
-			if portrait_node:
-				portrait_node.visible = false
+			display_empty_slot(slot)
+
+# Helper function to display an empty slot
+func display_empty_slot(slot: Button):
+	slot.text = "Empty"
+	slot.disabled = true
+	
+	# Clear style
+	update_button_style(slot, "normal", Color(0.2, 0.2, 0.2, 0.8))
+	update_button_style(slot, "hover", Color(0.3, 0.3, 0.3, 0.8))
+	update_button_style(slot, "pressed", Color(0.4, 0.4, 0.4, 0.8))
+	
+	# Hide portrait if applicable
+	var portrait_node = slot.get_node_or_null("Portrait")
+	if portrait_node:
+		portrait_node.visible = false
 
 # Helper function to update button style safely
 func update_button_style(button: Button, style_name: String, color: Color):
@@ -333,6 +318,9 @@ func purchase_character(slot_index):
 	
 	if slot_index < current_shop_options.size():
 		var char_id = current_shop_options[slot_index]
+		if char_id.is_empty():
+			return  # Empty slot
+			
 		var character = character_database.get_character(char_id)
 		
 		if character:
@@ -340,8 +328,8 @@ func purchase_character(slot_index):
 			if player.pay_for_character(character):
 				print("Character purchased: ", character.display_name)
 				
-				# Remove from shop options
-				current_shop_options.remove_at(slot_index)
+				# Mark the slot as empty but keep its position
+				current_shop_options[slot_index] = ""
 				update_shop_display()
 				
 				# Spawn character on bench
