@@ -13,12 +13,20 @@ var character_dropdown
 var canvas_layer
 var dropdown_options = []
 
+# Test units checkbox
+var test_units_checkbox
+var spawn_test_units = false
+
 func _ready():
 	# Wait a frame to ensure board is fully initialized
 	await get_tree().process_frame
 	
 	# Create UI
 	create_spawn_ui()
+	
+	# Optionally, spawn test units with varying health values
+	if spawn_test_units:
+		spawn_test_units_set()
 
 func create_spawn_ui():
 	# Create canvas layer for UI with proper settings
@@ -31,6 +39,15 @@ func create_spawn_ui():
 	control.set_anchors_preset(Control.PRESET_FULL_RECT)
 	control.mouse_filter = Control.MOUSE_FILTER_PASS  # Pass through if not hitting controls
 	canvas_layer.add_child(control)
+	
+	# Create test units checkbox
+	test_units_checkbox = CheckBox.new()
+	test_units_checkbox.text = "Spawn Test Units"
+	test_units_checkbox.position = Vector2(300, 130)
+	test_units_checkbox.size = Vector2(150, 30)
+	test_units_checkbox.mouse_filter = Control.MOUSE_FILTER_STOP
+	test_units_checkbox.toggled.connect(_on_test_units_toggled)
+	control.add_child(test_units_checkbox)
 	
 	# Create character dropdown
 	character_dropdown = OptionButton.new()
@@ -57,6 +74,11 @@ func create_spawn_ui():
 	control.add_child(spawn_button)
 	
 	print("Spawn UI created and connected")
+
+func _on_test_units_toggled(toggle):
+	spawn_test_units = toggle
+	if spawn_test_units:
+		spawn_test_units_set()
 
 func populate_character_dropdown():
 	if not character_database:
@@ -114,6 +136,14 @@ func spawn_selected_unit():
 		return
 	
 	# Find the first unoccupied bench tile
+	spawn_unit_on_bench(character_data)
+
+# Spawn a character on the first available bench slot
+func spawn_unit_on_bench(character_data):
+	if not board:
+		print("ERROR: Board not found")
+		return
+		
 	for i in range(board.BENCH_SPACES):
 		var tile_key = "bench_%d" % i
 		var tile = board.tiles.get(tile_key)
@@ -136,3 +166,50 @@ func spawn_selected_unit():
 			return
 	
 	print("No empty bench slots available")
+
+# Spawn a set of test units with varying health and mana values
+func spawn_test_units_set():
+	print("Spawning test units with varying health values")
+	
+	# Clear the bench first
+	clear_bench()
+	
+	# Create different health characters
+	var health_values = [100, 200, 300, 400, 50]
+	var mana_values = [100, 125, 150, 75, 60]
+	
+	# Get a list of all character IDs
+	var char_ids = []
+	for char_id in character_database.characters:
+		char_ids.append(char_id)
+	
+	# Spawn each test unit
+	for i in range(min(health_values.size(), board.BENCH_SPACES)):
+		# Get a character template
+		var char_id = char_ids[i % char_ids.size()]
+		var character_data = character_database.characters[char_id].duplicate()
+		
+		# Modify health and mana
+		character_data.health = health_values[i]
+		character_data.mana_max = mana_values[i]
+		
+		# Add a special indicator to the name
+		character_data.display_name += " (" + str(health_values[i]) + " HP)"
+		
+		# Spawn on the bench
+		spawn_unit_on_bench(character_data)
+
+# Clear all units from the bench
+func clear_bench():
+	if not board:
+		return
+		
+	for i in range(board.BENCH_SPACES):
+		var tile_key = "bench_%d" % i
+		var tile = board.tiles.get(tile_key)
+		
+		if tile and tile.is_occupied():
+			var unit = tile.get_occupying_unit()
+			if unit:
+				unit.queue_free()
+			tile.set_occupying_unit(null)

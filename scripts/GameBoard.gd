@@ -85,7 +85,7 @@ func create_sell_zone():
 		
 		# Position the sell zone to the left of the bench
 		sell_zone.position = Vector3(
-			-5,  # To the left of the board
+			-2,  # To the left of the board
 			0.05,  # Slightly above the board to avoid z-fighting
 			(PLAYER_ROWS + 1) * HEX_VERT_SPACING  # Same Z position as bench
 		)
@@ -280,7 +280,7 @@ func setup_camera():
 	board_center = Vector3(board_width / 2, 0, board_height / 2)
 	
 	# Initial camera zoom level
-	camera_zoom_level = board_height
+	camera_zoom_level = board_height-4
 	update_camera_position()
 	
 	# Look at the center of the board

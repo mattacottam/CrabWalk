@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="Character" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="Character" load_steps=2 format=3 uid="uid://o2c21rcothvm"]
 
-[ext_resource type="Script" path="res://resources/Character.gd" id="1_fwj3a"]
+[ext_resource type="Script" uid="uid://dt4hieyaspnol" path="res://resources/Character.gd" id="1_fwj3a"]
 
 [resource]
 script = ExtResource("1_fwj3a")
@@ -14,11 +14,12 @@ range = 3
 armor = 8
 magic_resist = 20
 mana_max = 90
+starting_mana = 30
 movement_speed = 3.0
 rarity = 2
 cost = 2
 shop_weight = 1
-traits = Array[String](["Shapeshifter", "Nature"])
+traits = ["Shapeshifter", "Nature"]
 ability_name = "Entangling Roots"
 ability_description = "Immobilizes enemies in a target area for 3 seconds"
 ability_damage = 15

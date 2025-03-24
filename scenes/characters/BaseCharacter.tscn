@@ -1,7 +1,8 @@
-[gd_scene load_steps=16 format=4 uid="uid://cmo28qa2tkkf3"]
+[gd_scene load_steps=12 format=4 uid="uid://cmo28qa2tkkf3"]
 
 [ext_resource type="Script" uid="uid://dhxrsyaocnnkp" path="res://scripts/BaseCharacter.gd" id="1_xktx3"]
 [ext_resource type="AnimationLibrary" uid="uid://bpu6v643lmdqp" path="res://assets/animations/Base_Pro/fall a loop.fbx" id="3_65ir8"]
+[ext_resource type="Script" uid="uid://cdra2nhvn176h" path="res://scripts/HealthBarSystem.gd" id="4_occlb"]
 [ext_resource type="AnimationLibrary" uid="uid://3f1f66rv3xue" path="res://assets/animations/Base_Pro/unarmed idle 01.fbx" id="40_l4ww3"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ycq85"]
@@ -452,31 +453,6 @@ bind/63/bone = -1
 bind/63/pose = Transform3D(-0.999718, 0.023737, 1.42995e-06, -3.01315e-07, -7.29318e-05, 1, 0.023737, 0.999718, 7.29184e-05, 0.0820544, -0.17246, -0.00196226)
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_q0yma"]
-
-[sub_resource type="ViewportTexture" id="ViewportTexture_psffp"]
-viewport_path = NodePath("StatusBar/SubViewport")
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_psffp"]
-bg_color = Color(0.231373, 0.113725, 0.0980392, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yyjhl"]
-bg_color = Color(0, 0.733333, 0.313726, 1)
-border_width_left = 5
-border_width_top = 5
-border_width_right = 5
-border_width_bottom = 5
-border_color = Color(0.231373, 0.113725, 0.0980392, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_q0yma"]
-bg_color = Color(0.172833, 0.172833, 0.172833, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_awexb"]
-bg_color = Color(0, 0.392157, 0.94902, 1)
-border_width_left = 5
-border_width_top = 5
-border_width_right = 5
-border_width_bottom = 4
-border_color = Color(0.172833, 0.172833, 0.172833, 1)
 
 [node name="Character" type="CharacterBody3D"]
 script = ExtResource("1_xktx3")
@@ -958,42 +934,12 @@ libraries = {
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
 shape = SubResource("CapsuleShape3D_q0yma")
 
-[node name="StatusBar" type="Sprite3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0133667, 2.3847, 0.00233459)
-billboard = 1
-texture = SubResource("ViewportTexture_psffp")
+[node name="UIBillboard" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 0)
 
-[node name="SubViewport" type="SubViewport" parent="StatusBar"]
-disable_3d = true
-transparent_bg = true
-size = Vector2i(100, 45)
+[node name="Nameplate" type="Label3D" parent="UIBillboard"]
+text = "Character"
+outline_size = 2
 
-[node name="HealthBar" type="ProgressBar" parent="StatusBar/SubViewport"]
-visible = false
-anchors_preset = 10
-anchor_right = 1.0
-offset_bottom = 20.0
-grow_horizontal = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-theme_override_styles/background = SubResource("StyleBoxFlat_psffp")
-theme_override_styles/fill = SubResource("StyleBoxFlat_yyjhl")
-value = 100.0
-show_percentage = false
-
-[node name="ManaBar" type="ProgressBar" parent="StatusBar/SubViewport"]
-visible = false
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -20.0
-offset_bottom = -7.5
-grow_horizontal = 2
-grow_vertical = 0
-size_flags_horizontal = 4
-size_flags_vertical = 4
-theme_override_styles/background = SubResource("StyleBoxFlat_q0yma")
-theme_override_styles/fill = SubResource("StyleBoxFlat_awexb")
-value = 100.0
-show_percentage = false
+[node name="HealthBarSystem" type="Node3D" parent="UIBillboard"]
+script = ExtResource("4_occlb")

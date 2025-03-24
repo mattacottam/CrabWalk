@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="Character" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="Character" load_steps=2 format=3 uid="uid://b8x1pt5xsvvkg"]
 
-[ext_resource type="Script" path="res://resources/Character.gd" id="1_p61gy"]
+[ext_resource type="Script" uid="uid://dt4hieyaspnol" path="res://resources/Character.gd" id="1_p61gy"]
 
 [resource]
 script = ExtResource("1_p61gy")
@@ -14,11 +14,12 @@ range = 1
 armor = 25
 magic_resist = 15
 mana_max = 100
+starting_mana = 0
 movement_speed = 2.8
 rarity = 2
 cost = 2
 shop_weight = 1
-traits = Array[String](["Guardian", "Noble"])
+traits = ["Guardian", "Noble"]
 ability_name = "Shield Wall"
 ability_description = "Creates a barrier that absorbs damage for nearby allies"
 ability_damage = 0

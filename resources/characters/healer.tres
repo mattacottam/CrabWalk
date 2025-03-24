@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="Character" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="Character" load_steps=2 format=3 uid="uid://s120fd5xo4ua"]
 
-[ext_resource type="Script" path="res://resources/Character.gd" id="1_kdcb1"]
+[ext_resource type="Script" uid="uid://dt4hieyaspnol" path="res://resources/Character.gd" id="1_kdcb1"]
 
 [resource]
 script = ExtResource("1_kdcb1")
@@ -14,11 +14,12 @@ range = 3
 armor = 5
 magic_resist = 15
 mana_max = 120
+starting_mana = 20
 movement_speed = 2.6
 rarity = 3
 cost = 3
 shop_weight = 1
-traits = Array[String](["Support", "Divine"])
+traits = ["Support", "Divine"]
 ability_name = "Healing Light"
 ability_description = "Restores 30 health to the lowest health ally"
 ability_damage = -30

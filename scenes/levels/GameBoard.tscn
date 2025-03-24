@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://ba833q1t0yowx"]
+[gd_scene load_steps=13 format=3 uid="uid://ba833q1t0yowx"]
 
 [ext_resource type="Script" uid="uid://cg5dl7gwb4ai4" path="res://scripts/GameBoard.gd" id="1_31iy7"]
 [ext_resource type="Script" uid="uid://y0i1bu2qc4wo" path="res://scripts/CharacterDatabase.gd" id="1_77p1f"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://crm6y18r5xin6" path="res://scenes/ui/PlayerUI.tscn" id="4_77p1f"]
 [ext_resource type="PackedScene" uid="uid://bdaw3p0vjnv8v" path="res://scenes/ui/ShopUI.tscn" id="5_qfvow"]
 [ext_resource type="Script" uid="uid://cmvblyrj6dyho" path="res://scripts/Player.gd" id="6_qfvow"]
+[ext_resource type="Script" uid="uid://b5muy8x5q7pb7" path="res://scripts/TestHealthBar.gd" id="8_r5hcy"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_8hsy1"]
 size = Vector2(28, 20)
@@ -95,3 +96,6 @@ theme_override_font_sizes/font_size = 24
 text = "Not enough gold!"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="HealthTester" type="Node" parent="."]
+script = ExtResource("8_r5hcy")

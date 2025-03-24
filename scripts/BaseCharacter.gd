@@ -3,13 +3,19 @@ extends CharacterBody3D
 # Character data
 var character_data = null
 
+# Current stats
+var current_health: int = 100
+var current_mana: int = 0
+var max_health: int = 100
+var max_mana: int = 100
+
 # Visual elements
 var character_mesh = null
 var character_material = null
+var health_bar_system = null
 
 # UI elements
 var nameplate = null
-var health_bar = null
 
 # Drag and drop properties
 var is_dragging = false
@@ -64,58 +70,61 @@ func _ready():
 	if character_data:
 		apply_character_visuals()
 	
-	# Create UI elements
-	create_ui_elements()
-
-# Create nameplate and health bar
-func create_ui_elements():
-	# Create a Billboard node for the nameplate
-	var billboard = Node3D.new()
-	billboard.name = "UiBillboard"
-	billboard.top_level = true  # Independent transform
-	add_child(billboard)
+	# Find or create health bar system
+	health_bar_system = $UIBillboard/HealthBarSystem
+	if not health_bar_system:
+		health_bar_system = HealthBarSystem.new(
+			max_health if character_data else 100,
+			max_mana if character_data else 100
+		)
+		health_bar_system.name = "HealthBarSystem"
+		$UIBillboard.add_child(health_bar_system)
 	
-	# Position it above the character
-	billboard.position = Vector3(0, 2.2, 0)
-	
-	# Create the nameplate label
-	nameplate = Label3D.new()
-	nameplate.name = "Nameplate"
-	nameplate.text = character_data.display_name if character_data else "Character"
-	nameplate.font_size = 16
-	nameplate.outline_size = 2
-	nameplate.position = Vector3(0, 0.3, 0)
-	billboard.add_child(nameplate)
-	
-	# Create a health bar
-	health_bar = MeshInstance3D.new()
-	health_bar.name = "HealthBar"
-	
-	# Create a cube mesh for the health bar
-	var box_mesh = BoxMesh.new()
-	box_mesh.size = Vector3(1.0, 0.1, 0.1)  # Width, height, depth
-	health_bar.mesh = box_mesh
-	
-	# Create material for the health bar
-	var health_material = StandardMaterial3D.new()
-	health_material.albedo_color = Color(0.2, 0.8, 0.2)  # Green
-	health_bar.material_override = health_material
-	
-	# Position the health bar
-	health_bar.position = Vector3(0, 0, 0)
-	billboard.add_child(health_bar)
-	
-	# Update UI with character data
+	# Initialize stats and update UI
+	initialize_stats()
 	update_ui()
+	
+	# Set initial health and mana for display
+	if health_bar_system:
+		health_bar_system.update_health_display(current_health)
+		health_bar_system.update_mana_display(current_mana)
+
+# Initialize character stats from character_data
+func initialize_stats():
+	if character_data:
+		max_health = character_data.health
+		current_health = max_health
+		max_mana = character_data.mana_max
+		
+		# Use starting_mana from character data if available
+		if character_data.get("starting_mana") != null:
+			current_mana = character_data.starting_mana
+		else:
+			current_mana = 0
+		
+		# Make sure current_mana is not more than max_mana
+		current_mana = min(current_mana, max_mana)
+		
+		# Update health bar system
+		if health_bar_system:
+			health_bar_system.set_max_health(max_health)
+			health_bar_system.set_max_mana(max_mana)
+			health_bar_system.update_health_display(current_health)
+			health_bar_system.update_mana_display(current_mana)
 
 # Update UI elements based on character data
 func update_ui():
-	if character_data and nameplate:
-		nameplate.text = character_data.display_name
+	var nameplate_node = $UIBillboard/Nameplate
+	if nameplate_node:
+		# Hide the nameplate
+		nameplate_node.visible = false
+		
+	if character_data and nameplate_node:
+		nameplate_node.text = character_data.display_name
 		
 		# Set nameplate color based on rarity
 		var rarity_color = character_data.get_rarity_color()
-		nameplate.modulate = rarity_color
+		nameplate_node.modulate = rarity_color
 
 # Ensure there's a proper collision shape for clicking
 func ensure_collision():
@@ -140,6 +149,7 @@ func ensure_collision():
 func set_character_data(data):
 	character_data = data
 	apply_character_visuals()
+	initialize_stats()
 	update_ui()
 
 # Apply visual customizations based on character data
@@ -180,6 +190,65 @@ func find_character_mesh(node):
 # Get character data
 func get_character_data():
 	return character_data
+
+# Take damage and update health display
+func take_damage(amount: int):
+	current_health = max(0, current_health - amount)
+	
+	if health_bar_system:
+		health_bar_system.update_health_display(current_health)
+	
+	# Check if dead
+	if current_health <= 0:
+		die()
+	
+	return current_health
+
+# Heal character and update health display
+func heal(amount: int):
+	current_health = min(max_health, current_health + amount)
+	
+	if health_bar_system:
+		health_bar_system.update_health_display(current_health)
+	
+	return current_health
+
+# Add mana and update mana display
+func add_mana(amount: int):
+	current_mana = min(max_mana, current_mana + amount)
+	
+	if health_bar_system:
+		health_bar_system.update_mana_display(current_mana)
+	
+	return current_mana
+
+# Use mana for abilities
+func use_mana(amount: int) -> bool:
+	if current_mana >= amount:
+		current_mana -= amount
+		
+		if health_bar_system:
+			health_bar_system.update_mana_display(current_mana)
+		
+		return true
+	
+	return false
+
+# Handle character death
+func die():
+	# In a real game, you'd add death animation, particle effects, etc.
+	print(character_data.display_name + " has died!")
+	
+	# Maybe add a slight delay before removing
+	var timer = get_tree().create_timer(0.5)
+	await timer.timeout
+	
+	# Tell the tile we're no longer there
+	if original_tile:
+		original_tile.set_occupying_unit(null)
+	
+	# Remove the character
+	queue_free()
 
 func _unhandled_input(event):
 	# Only process input if not being handled by UI
@@ -366,3 +435,17 @@ func snap_to_tile(tile):
 			original_tile.set_occupying_unit(null)
 		
 		tile.set_occupying_unit(self)
+
+# Function to test the health bar (for debugging)
+func test_health_damage():
+	take_damage(10)
+	
+	# Add a timer to heal after a second
+	var timer = get_tree().create_timer(1.0)
+	await timer.timeout
+	heal(5)
+	
+	# Add mana
+	timer = get_tree().create_timer(1.0)
+	await timer.timeout
+	add_mana(30)

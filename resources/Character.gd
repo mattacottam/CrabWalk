@@ -14,6 +14,7 @@ class_name Character
 @export var armor: int = 0
 @export var magic_resist: int = 0
 @export var mana_max: int = 100
+@export var starting_mana: int = 0  # NEW: Starting mana amount
 @export var movement_speed: float = 3.0
 
 # Gameplay
@@ -22,7 +23,7 @@ class_name Character
 @export var shop_weight: int = 1  # Higher value = more common in the shop pool
 
 # Traits/synergies
-@export var traits: Array[String] = []
+@export var traits: Array = []
 
 # Ability
 @export var ability_name: String = ""

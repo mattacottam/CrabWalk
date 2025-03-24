@@ -1,9 +1,10 @@
-extends Node
+@tool
+extends EditorScript
 
-# A script that can generate multiple character resources at once
-# Attach this to a temporary node and run it
+# This script can generate multiple character resources at once
+# Run with File > Run (Shift+Ctrl+X on Windows/Linux, Shift+Cmd+X on Mac)
 
-func _ready():
+func _run():
 	# Create all characters
 	create_berserker()
 	create_healer()
@@ -11,8 +12,6 @@ func _ready():
 	create_druid()
 	
 	print("All characters created successfully!")
-	# The node will automatically be removed after running
-	queue_free()
 
 func create_berserker():
 	var berserker = Character.new()
@@ -30,6 +29,7 @@ func create_berserker():
 	berserker.armor = 8
 	berserker.magic_resist = 5
 	berserker.mana_max = 90
+	berserker.starting_mana = 0  # Starts with no mana
 	berserker.movement_speed = 3.2
 	
 	# Gameplay
@@ -37,9 +37,8 @@ func create_berserker():
 	berserker.cost = 3
 	berserker.shop_weight = 1
 	
-	# Traits/synergies - create a properly typed array
-	var traits_array: Array[String] = ["Berserker", "Orcish"]
-	berserker.traits = traits_array
+	# Traits/synergies
+	berserker.traits = ["Berserker", "Orcish"]
 	
 	# Ability
 	berserker.ability_name = "Blood Frenzy"
@@ -68,6 +67,7 @@ func create_healer():
 	healer.armor = 5
 	healer.magic_resist = 15
 	healer.mana_max = 120
+	healer.starting_mana = 20  # Starts with some mana
 	healer.movement_speed = 2.6
 	
 	# Gameplay
@@ -75,9 +75,8 @@ func create_healer():
 	healer.cost = 3
 	healer.shop_weight = 1
 	
-	# Traits/synergies - create a properly typed array
-	var traits_array: Array[String] = ["Support", "Divine"]
-	healer.traits = traits_array
+	# Traits/synergies
+	healer.traits = ["Support", "Divine"]
 	
 	# Ability
 	healer.ability_name = "Healing Light"
@@ -106,6 +105,7 @@ func create_knight():
 	knight.armor = 25
 	knight.magic_resist = 15
 	knight.mana_max = 100
+	knight.starting_mana = 0  # Starts with no mana
 	knight.movement_speed = 2.8
 	
 	# Gameplay
@@ -113,9 +113,8 @@ func create_knight():
 	knight.cost = 2
 	knight.shop_weight = 1
 	
-	# Traits/synergies - create a properly typed array
-	var traits_array: Array[String] = ["Guardian", "Noble"]
-	knight.traits = traits_array
+	# Traits/synergies
+	knight.traits = ["Guardian", "Noble"]
 	
 	# Ability
 	knight.ability_name = "Shield Wall"
@@ -144,6 +143,7 @@ func create_druid():
 	druid.armor = 8
 	druid.magic_resist = 20
 	druid.mana_max = 90
+	druid.starting_mana = 30  # Starts with significant mana
 	druid.movement_speed = 3.0
 	
 	# Gameplay
@@ -151,9 +151,8 @@ func create_druid():
 	druid.cost = 2
 	druid.shop_weight = 1
 	
-	# Traits/synergies - create a properly typed array
-	var traits_array: Array[String] = ["Shapeshifter", "Nature"]
-	druid.traits = traits_array
+	# Traits/synergies
+	druid.traits = ["Shapeshifter", "Nature"]
 	
 	# Ability
 	druid.ability_name = "Entangling Roots"
