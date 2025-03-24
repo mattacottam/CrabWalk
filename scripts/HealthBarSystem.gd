@@ -80,7 +80,7 @@ func _process(_delta):
 		if camera:
 			# Get camera basis
 			var camera_forward = -camera.global_transform.basis.z.normalized()
-			var camera_position = camera.global_position
+			var _camera_position = camera.global_position
 			
 			# Calculate a better angle for the health bars
 			# Instead of directly facing the camera, tilt them to be more visible
@@ -92,7 +92,7 @@ func _process(_delta):
 			var display_normal = camera_forward.lerp(up_vector, blend_factor).normalized()
 			
 			# Rotate to face this direction but keep the x-axis horizontal
-			var target_position = global_position + display_normal
+			var _target_position = global_position + display_normal
 			
 			# Create a basis with y axis as our display normal and z axis as world up
 			var y_axis = display_normal

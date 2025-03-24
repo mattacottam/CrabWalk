@@ -116,7 +116,7 @@ func take_damage(damage: int):
 
 # Add interest based on current gold
 func add_interest():
-	var interest = min(gold / INTEREST_THRESHOLD, MAX_INTEREST)
+	var interest = min(gold / float(INTEREST_THRESHOLD), MAX_INTEREST)
 	add_gold(interest)
 	return interest
 

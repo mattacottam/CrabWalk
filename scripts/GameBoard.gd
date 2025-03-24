@@ -361,16 +361,16 @@ func clear_highlight():
 		highlighted_tile = null
 
 # Get all UI nodes at a position
-func _get_ui_nodes_at_position(position):
+func _get_ui_nodes_at_position(pos):
 	var result = []
 	var root = get_tree().root
-	_recursive_get_control_nodes_at_position(root, position, result)
+	_recursive_get_control_nodes_at_position(root, pos, result)
 	return result
 
 # Recursively collect all Control nodes at a position
-func _recursive_get_control_nodes_at_position(node, position, result):
-	if node is Control and node.get_global_rect().has_point(position) and node.visible:
+func _recursive_get_control_nodes_at_position(node, pos, result):
+	if node is Control and node.get_global_rect().has_point(pos) and node.visible:
 		result.append(node)
 	
 	for child in node.get_children():
-		_recursive_get_control_nodes_at_position(child, position, result)
+		_recursive_get_control_nodes_at_position(child, pos, result)
