@@ -103,6 +103,20 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
 text = "Character 1"
 script = ExtResource("2_1u5rt")
 
+[node name="Portrait" type="TextureRect" parent="ShopContainer/ShopSlots/ShopSlot1"]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -20.0
+offset_right = 48.0
+offset_bottom = 20.0
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
 [node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot1"]
 layout_mode = 1
 anchors_preset = 7
@@ -127,6 +141,20 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_nj2dl")
 theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
 text = "Character 2"
 script = ExtResource("2_1u5rt")
+
+[node name="Portrait" type="TextureRect" parent="ShopContainer/ShopSlots/ShopSlot2"]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -20.0
+offset_right = 48.0
+offset_bottom = 20.0
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
 
 [node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot2"]
 layout_mode = 1
@@ -153,6 +181,20 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
 text = "Character 3"
 script = ExtResource("2_1u5rt")
 
+[node name="Portrait" type="TextureRect" parent="ShopContainer/ShopSlots/ShopSlot3"]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -20.0
+offset_right = 48.0
+offset_bottom = 20.0
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
 [node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot3"]
 layout_mode = 1
 anchors_preset = 7
@@ -178,6 +220,20 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
 text = "Character 4"
 script = ExtResource("2_1u5rt")
 
+[node name="Portrait" type="TextureRect" parent="ShopContainer/ShopSlots/ShopSlot4"]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -20.0
+offset_right = 48.0
+offset_bottom = 20.0
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
 [node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot4"]
 layout_mode = 1
 anchors_preset = 7
@@ -202,6 +258,20 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_nj2dl")
 theme_override_styles/normal = SubResource("StyleBoxFlat_t467i")
 text = "Character 5"
 script = ExtResource("2_1u5rt")
+
+[node name="Portrait" type="TextureRect" parent="ShopContainer/ShopSlots/ShopSlot5"]
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -20.0
+offset_right = 48.0
+offset_bottom = 20.0
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
 
 [node name="CostLabel" type="Label" parent="ShopContainer/ShopSlots/ShopSlot5"]
 layout_mode = 1

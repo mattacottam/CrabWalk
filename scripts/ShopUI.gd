@@ -258,11 +258,25 @@ func update_shop_display():
 				if cost_label:
 					cost_label.text = str(character.cost) + "g"
 				
-				# Set color based on rarity
+				# Set color based on character's rarity
 				var color = character.get_rarity_color()
-				var normal_style = slot.get_theme_stylebox("normal")
-				if normal_style:
-					normal_style.bg_color = color.darkened(0.7)
+				
+				# Get each style individually and set its color
+				update_button_style(slot, "normal", color.darkened(0.7))
+				update_button_style(slot, "hover", color.darkened(0.5))
+				update_button_style(slot, "pressed", color.darkened(0.3))
+				
+				# Add portrait if available
+				var portrait_node = slot.get_node_or_null("Portrait")
+				if portrait_node and portrait_node is TextureRect:
+					# Try to load portrait by character ID
+					var portrait_path = "res://resources/portraits/" + character.id + ".svg"
+					var portrait = load(portrait_path)
+					if portrait:
+						portrait_node.texture = portrait
+						portrait_node.visible = true
+					else:
+						portrait_node.visible = false
 				
 				# Enable button
 				slot.disabled = false
@@ -270,10 +284,39 @@ func update_shop_display():
 				# Empty slot if no character
 				slot.text = "Empty"
 				slot.disabled = true
+				
+				# Clear style
+				update_button_style(slot, "normal", Color(0.2, 0.2, 0.2, 0.8))
+				update_button_style(slot, "hover", Color(0.3, 0.3, 0.3, 0.8))
+				update_button_style(slot, "pressed", Color(0.4, 0.4, 0.4, 0.8))
+				
+				# Hide portrait if applicable
+				var portrait_node = slot.get_node_or_null("Portrait")
+				if portrait_node:
+					portrait_node.visible = false
 		else:
 			# Empty slot
 			slot.text = "Empty"
 			slot.disabled = true
+			
+			# Clear style
+			update_button_style(slot, "normal", Color(0.2, 0.2, 0.2, 0.8))
+			update_button_style(slot, "hover", Color(0.3, 0.3, 0.3, 0.8))
+			update_button_style(slot, "pressed", Color(0.4, 0.4, 0.4, 0.8))
+			
+			# Hide portrait if applicable
+			var portrait_node = slot.get_node_or_null("Portrait")
+			if portrait_node:
+				portrait_node.visible = false
+
+# Helper function to update button style safely
+func update_button_style(button: Button, style_name: String, color: Color):
+	var style = button.get_theme_stylebox(style_name)
+	if style:
+		# We need to create a unique copy of the style to avoid affecting other buttons
+		var style_copy = style.duplicate()
+		style_copy.bg_color = color
+		button.add_theme_stylebox_override(style_name, style_copy)
 
 # Handle shop slot button press
 func _on_shop_slot_pressed(slot_index):
