@@ -43,7 +43,7 @@ func _ready():
 		if original_tile:
 			original_tile.set_occupying_unit(self)
 	else:
-		print("WARNING: Board reference not found!")
+		push_error("WARNING: Board reference not found!")
 	
 	# Create a plane for drag calculations
 	drag_plane = Plane(Vector3.UP, 0)
@@ -51,8 +51,6 @@ func _ready():
 	# Start idle animation
 	if animation_player:
 		animation_player.play(IDLE_ANIM)
-	else:
-		print("WARNING: Animation player not found!")
 
 # Ensure there's a proper collision shape for clicking
 func ensure_collision():
@@ -76,7 +74,6 @@ func ensure_collision():
 # Set character data (called by shop system)
 func set_character_data(data):
 	character_data = data
-	print("Character data set successfully")
 
 # Get character data
 func get_character_data():
@@ -104,7 +101,6 @@ func get_mouse_collision():
 	# Get the mouse position in 3D space
 	var camera = get_viewport().get_camera_3d()
 	if not camera:
-		print("No camera found")
 		return null
 		
 	var mouse_pos = get_viewport().get_mouse_position()
@@ -121,7 +117,6 @@ func get_mouse_collision():
 	return space_state.intersect_ray(query)
 
 func start_drag(mouse_pos):
-	print("Starting drag")
 	is_dragging = true
 	
 	# Save our starting position and tile
@@ -179,7 +174,6 @@ func update_drag_position(mouse_pos):
 					board.clear_highlight()
 
 func end_drag():
-	print("End drag")
 	is_dragging = false
 	
 	# Check if the unit is over the sell zone
@@ -216,23 +210,15 @@ func end_drag():
 
 func is_over_sell_zone():
 	if not sell_zone:
-		print("No sell zone found")
 		return false
 	
 	# Check if we're close to the sell zone's position using distance comparison
 	var distance = global_position.distance_to(sell_zone.global_position)
 	
 	# If we're within 2 units of the sell zone's center, consider it a hit
-	if distance < 2.0:
-		print("Over sell zone, distance: ", distance)
-		return true
-	
-	print("Not over sell zone, distance: ", distance)
-	return false
+	return distance < 2.0
 
 func sell_unit():
-	print("Selling unit")
-	
 	# Tell the original tile we're no longer there
 	if original_tile:
 		original_tile.set_occupying_unit(null)

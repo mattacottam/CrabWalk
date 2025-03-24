@@ -363,13 +363,6 @@ func clear_highlight():
 func _input(event):
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var mouse_pos = get_viewport().get_mouse_position()
-		print("Mouse click at: ", mouse_pos)
-		
-		# Print UI nodes under mouse
-		var ui_nodes = _get_ui_nodes_at_position(mouse_pos)
-		print("UI nodes under mouse: ", ui_nodes.size())
-		for node in ui_nodes:
-			print("- ", node.name, " (", node.get_class(), ")")
 
 # Get all UI nodes at a position
 func _get_ui_nodes_at_position(position):

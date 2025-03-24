@@ -64,7 +64,6 @@ func highlight_active():
 	if mesh_instance and mesh_instance.material_override:
 		mesh_instance.material_override.albedo_color = active_color
 		mesh_instance.material_override.emission_energy_multiplier = 1.0
-		print("SellZone highlighted")
 
 # Reset highlight when unit leaves
 func reset_highlight():

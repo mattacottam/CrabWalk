@@ -12,10 +12,18 @@ var current_shop_options = []
 var shop_slots = []
 const NUM_SHOP_SLOTS = 5
 
+# UI elements
+var reroll_button: Button
+var not_enough_gold_label: Label
+
 # Signals
 signal character_purchased(character)
 
 func _ready():
+	# Set this control to PASS to allow clicks to reach children
+	mouse_filter = Control.MOUSE_FILTER_PASS
+	print("ShopUI mouse_filter set to PASS")
+	
 	# Get references
 	character_database = get_node_or_null("/root/GameBoard/CharacterDatabase")
 	player = get_node_or_null("/root/GameBoard/Player")
@@ -28,30 +36,193 @@ func _ready():
 	if not board:
 		push_error("ShopUI: Could not find GameBoard")
 	
+	# Find UI elements with more robust search
+	reroll_button = find_node_by_name("RerollButton")
+	not_enough_gold_label = find_node_by_name("NotEnoughGoldLabel")
+	
+	# Create not enough gold label if it doesn't exist
+	if not not_enough_gold_label:
+		not_enough_gold_label = create_not_enough_gold_label()
+	
+	print("ShopUI elements found:")
+	print("- reroll_button: ", reroll_button != null)
+	print("- not_enough_gold_label: ", not_enough_gold_label != null)
+	
+	# Connect to player signals if available
+	if player:
+		player.not_enough_gold.connect(_on_not_enough_gold)
+	
+	# Configure mouse filters properly
+	_configure_mouse_filters()
+	
 	# Set up shop slots
 	setup_shop_slots()
 	
 	# Initial shop roll
 	roll_shop()
 	
-	# Set mouse filter for parent Control
-	mouse_filter = Control.MOUSE_FILTER_STOP
+	# Connect reroll button if present
+	if reroll_button and not reroll_button.pressed.is_connected(_on_reroll_button_pressed):
+		reroll_button.pressed.connect(_on_reroll_button_pressed)
+		print("Connected reroll button")
+
+# Create a not enough gold label if it doesn't exist
+func create_not_enough_gold_label() -> Label:
+	var label = Label.new()
+	label.name = "NotEnoughGoldLabel"
+	label.text = "Not enough gold!"
+	label.add_theme_color_override("font_color", Color(1, 0.3, 0.3))  # Reddish color
 	
-	# Find all buttons and set their mouse filters
+	# Set size and position
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.size = Vector2(200, 40)
+	label.position = Vector2(200, 100)  # Position it visible on screen
+	
+	# Initially hidden
+	label.visible = false
+	
+	add_child(label)
+	return label
+
+# Recursively find a node by name in the scene
+func find_node_by_name(node_name: String) -> Node:
+	# First try direct child
+	var node = get_node_or_null(node_name)
+	if node:
+		return node
+	
+	# Then try searching all children recursively
 	for child in get_children():
+		if child.name == node_name:
+			return child
+		
+		# If this child has children, check them too
+		if child.get_child_count() > 0:
+			var found = find_node_in_children(child, node_name)
+			if found:
+				return found
+	
+	# Not found
+	return null
+
+# Helper to recursively search children
+func find_node_in_children(parent: Node, node_name: String) -> Node:
+	for child in parent.get_children():
+		if child.name == node_name:
+			return child
+		
+		# Recursively check this child's children
+		if child.get_child_count() > 0:
+			var found = find_node_in_children(child, node_name)
+			if found:
+				return found
+	
+	return null
+
+# Handle not enough gold signal
+func _on_not_enough_gold():
+	print("ShopUI: Not enough gold!")
+	if not_enough_gold_label:
+		not_enough_gold_label.visible = true
+		
+		# Hide after delay
+		var timer = get_tree().create_timer(1.5)
+		await timer.timeout
+		
+		if is_instance_valid(not_enough_gold_label):
+			not_enough_gold_label.visible = false
+
+# Configure mouse filters for all controls
+func _configure_mouse_filters():
+	# The main control passes mouse events
+	mouse_filter = Control.MOUSE_FILTER_PASS
+	
+	# Any containers should pass mouse events
+	for child in get_children():
+		if child is Control and not child is Button:
+			child.mouse_filter = Control.MOUSE_FILTER_PASS
+			print("Set Control to PASS: ", child.name)
+			
+			# Check nested controls
+			for subchild in child.get_children():
+				if subchild is Control and not subchild is Button:
+					subchild.mouse_filter = Control.MOUSE_FILTER_PASS
+					print("Set nested Control to PASS: ", subchild.name)
+		
+		# Buttons should stop mouse events
 		if child is Button:
 			child.mouse_filter = Control.MOUSE_FILTER_STOP
+			child.focus_mode = Control.FOCUS_ALL
+			child.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			print("Set Button to STOP: ", child.name)
 
 # Set up the shop slot buttons
 func setup_shop_slots():
-	var slot_container = $ShopContainer/ShopSlots
+	var slot_container = find_node_by_name("ShopSlots")
+	if not slot_container:
+		slot_container = find_node_by_name("ShopContainer")
+		if not slot_container:
+			push_error("ShopUI: Could not find ShopSlots or ShopContainer")
+			return
+	
+	# Set container to pass mouse events
+	if slot_container is Control:
+		slot_container.mouse_filter = Control.MOUSE_FILTER_PASS
+		print("Set shop slots container to PASS: ", slot_container.name)
+	
+	# Find shop slot buttons by pattern matching
+	shop_slots.clear()
+	
+	# Try to find ShopSlot buttons directly
 	for i in range(NUM_SHOP_SLOTS):
-		var slot = slot_container.get_node("ShopSlot" + str(i+1))
-		if slot:
+		var slot_name = "ShopSlot" + str(i+1)
+		var slot = find_node_by_name(slot_name)
+		
+		if slot and slot is Button:
 			shop_slots.append(slot)
 			
-			# Connect button press
-			slot.pressed.connect(_on_shop_slot_pressed.bind(i))
+			# Configure the button
+			slot.mouse_filter = Control.MOUSE_FILTER_STOP
+			slot.focus_mode = Control.FOCUS_ALL
+			slot.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			
+			# Make sure the pressed signal is connected
+			if not slot.pressed.is_connected(_on_shop_slot_pressed.bind(i)):
+				slot.pressed.connect(_on_shop_slot_pressed.bind(i))
+			
+			print("Configured shop slot: ", slot.name, " with index ", i)
+	
+	# If we couldn't find any buttons by name, look for all buttons in the container
+	if shop_slots.size() == 0 and slot_container:
+		var found_buttons = []
+		find_all_buttons(slot_container, found_buttons)
+		
+		for i in range(min(found_buttons.size(), NUM_SHOP_SLOTS)):
+			var slot = found_buttons[i]
+			shop_slots.append(slot)
+			
+			# Configure the button
+			slot.mouse_filter = Control.MOUSE_FILTER_STOP
+			slot.focus_mode = Control.FOCUS_ALL
+			slot.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			
+			# Make sure the pressed signal is connected
+			if not slot.pressed.is_connected(_on_shop_slot_pressed.bind(i)):
+				slot.pressed.connect(_on_shop_slot_pressed.bind(i))
+			
+			print("Found button and configured as shop slot: ", slot.name, " with index ", i)
+	
+	print("Found ", shop_slots.size(), " shop slot buttons")
+
+# Find all buttons in a container and its children
+func find_all_buttons(parent: Node, result: Array):
+	for child in parent.get_children():
+		if child is Button:
+			result.append(child)
+		
+		if child.get_child_count() > 0:
+			find_all_buttons(child, result)
 
 # Roll new shop options
 func roll_shop():
@@ -67,10 +238,11 @@ func roll_shop():
 	
 	# Update shop UI
 	update_shop_display()
+	print("Shop rolled with ", current_shop_options.size(), " characters")
 
 # Update shop display with current options
 func update_shop_display():
-	for i in range(NUM_SHOP_SLOTS):
+	for i in range(shop_slots.size()):
 		var slot = shop_slots[i]
 		
 		if i < current_shop_options.size():
@@ -89,7 +261,8 @@ func update_shop_display():
 				# Set color based on rarity
 				var color = character.get_rarity_color()
 				var normal_style = slot.get_theme_stylebox("normal")
-				normal_style.bg_color = color.darkened(0.7)
+				if normal_style:
+					normal_style.bg_color = color.darkened(0.7)
 				
 				# Enable button
 				slot.disabled = false
@@ -104,7 +277,15 @@ func update_shop_display():
 
 # Handle shop slot button press
 func _on_shop_slot_pressed(slot_index):
+	print("Shop slot pressed: ", slot_index)
+	purchase_character(slot_index)
+
+# Purchase a character by slot index
+func purchase_character(slot_index):
+	print("ShopUI.purchase_character called for index: ", slot_index)
+	
 	if not character_database or not player or not board:
+		push_error("Missing dependencies in purchase_character")
 		return
 	
 	if slot_index < current_shop_options.size():
@@ -114,6 +295,8 @@ func _on_shop_slot_pressed(slot_index):
 		if character:
 			# Try to purchase (deduct gold)
 			if player.pay_for_character(character):
+				print("Character purchased: ", character.display_name)
+				
 				# Remove from shop options
 				current_shop_options.remove_at(slot_index)
 				update_shop_display()
@@ -123,15 +306,16 @@ func _on_shop_slot_pressed(slot_index):
 				
 				# Emit purchase signal
 				emit_signal("character_purchased", character)
-			else:
-				# Not enough gold - show message
-				$NotEnoughGoldLabel.visible = true
-				await get_tree().create_timer(1.5).timeout
-				$NotEnoughGoldLabel.visible = false
+			# Note: The error message is now handled by the not_enough_gold signal
+		else:
+			print("Invalid character data")
+	else:
+		print("Invalid slot index: ", slot_index)
 
 # Spawn purchased character on the bench
 func spawn_character_on_bench(character_data):
 	if not board:
+		push_error("Cannot spawn character: board reference is null")
 		return
 	
 	# Find the first unoccupied bench tile
@@ -139,7 +323,7 @@ func spawn_character_on_bench(character_data):
 		var tile_key = "bench_%d" % i
 		var tile = board.tiles.get(tile_key)
 		
-		if tile and not tile.occupied:
+		if tile and not tile.is_occupied():
 			# Spawn character scene
 			var character_scene = load("res://scenes/characters/BaseCharacter.tscn")
 			var character = character_scene.instantiate()
@@ -159,3 +343,28 @@ func spawn_character_on_bench(character_data):
 	
 	print("No empty bench slots available")
 	# Could show a message about bench being full
+
+# Handle reroll button press
+func _on_reroll_button_pressed():
+	print("Reroll button pressed")
+	if player and player.pay_reroll():
+		roll_shop()
+	# Note: Error message for not enough gold is now handled by the not_enough_gold signal
+
+# Manual connection for debugging
+func _input(event):
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var mouse_pos = get_viewport().get_mouse_position()
+		
+		# Check shop slots
+		for i in range(shop_slots.size()):
+			var slot = shop_slots[i]
+			if slot and slot.get_global_rect().has_point(mouse_pos) and not slot.disabled:
+				print("Shop slot area clicked: ", i)
+				purchase_character(i)
+				return
+				
+		# Check reroll button
+		if reroll_button and reroll_button.get_global_rect().has_point(mouse_pos):
+			print("Reroll button area clicked!")
+			_on_reroll_button_pressed()

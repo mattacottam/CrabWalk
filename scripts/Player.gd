@@ -4,6 +4,7 @@ signal gold_changed(new_amount)
 signal xp_changed(new_xp, required_xp)
 signal level_changed(new_level)
 signal health_changed(new_health)
+signal not_enough_gold()
 
 # Player economy
 var gold: int = 0
@@ -25,7 +26,7 @@ const MAX_INTEREST = 5
 const XP_PER_PURCHASE = 4
 const BASE_XP_COST = 4
 const REROLL_COST = 2
-const STARTING_GOLD = 5
+const STARTING_GOLD = 20
 
 func _ready():
 	# Initialize with starting gold
@@ -33,13 +34,22 @@ func _ready():
 
 # Set gold amount
 func set_gold(amount: int):
-	gold = amount
+	# Prevent gold from going below 0
+	gold = max(amount, 0)
 	emit_signal("gold_changed", gold)
 
 # Add gold (can be negative to subtract)
 func add_gold(amount: int):
-	set_gold(gold + amount)
-	return gold >= 0  # Return whether we have enough gold
+	var new_amount = gold + amount
+	
+	# Check if we'll have enough gold for a negative transaction
+	if amount < 0 and new_amount < 0:
+		emit_signal("not_enough_gold")
+		return false
+	
+	# Set the new gold amount (this will already prevent going below 0)
+	set_gold(new_amount)
+	return true
 
 # Calculate XP needed for next level
 func xp_required_for_level(target_level: int) -> int:
@@ -64,6 +74,10 @@ func add_xp(amount: int):
 
 # Purchase XP with gold
 func buy_xp():
+	if gold < BASE_XP_COST:
+		emit_signal("not_enough_gold")
+		return false
+		
 	if add_gold(-BASE_XP_COST):
 		add_xp(XP_PER_PURCHASE)
 		return true
@@ -76,10 +90,18 @@ func level_up():
 
 # Pay for a shop reroll
 func pay_reroll() -> bool:
+	if gold < REROLL_COST:
+		emit_signal("not_enough_gold")
+		return false
+		
 	return add_gold(-REROLL_COST)
 
 # Pay for a character
 func pay_for_character(character: Character) -> bool:
+	if gold < character.cost:
+		emit_signal("not_enough_gold")
+		return false
+		
 	return add_gold(-character.cost)
 
 # Set player health
