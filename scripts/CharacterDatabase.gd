@@ -26,12 +26,29 @@ const SHOP_ODDS = {
 }
 
 func _ready():
+	# Reset character pools to ensure we start fresh
+	for rarity in character_pools:
+		character_pools[rarity].clear()
+	
 	# Register all characters
 	register_all_characters()
 	
 	# If no characters were found, create test characters
 	if characters.size() == 0:
 		create_test_characters()
+	
+	# Debug: Print all registered characters and pools
+	print_character_pools()
+
+# Debug: Print all registered characters and pools
+func print_character_pools():
+	print("=========== CHARACTER DATABASE ===========")
+	print("Total characters registered: " + str(characters.size()))
+	for rarity in range(1, 6):
+		print("Rarity " + str(rarity) + " pool: " + str(character_pools[rarity].size()) + " characters")
+		for char_id in character_pools[rarity]:
+			print("  - " + characters[char_id].display_name)
+	print("=========================================")
 
 # Register all character resources in the game
 func register_all_characters():
@@ -43,9 +60,13 @@ func register_all_characters():
 		
 		while file_name != "":
 			if file_name.ends_with(".tres"):
-				var character = load("res://resources/characters/" + file_name)
+				var path = "res://resources/characters/" + file_name
+				print("Loading character resource: " + path)
+				var character = load(path)
 				if character is Character:
 					register_character(character)
+				else:
+					print("WARNING: Resource is not a Character: " + path)
 			file_name = dir.get_next()
 	else:
 		push_error("Could not access character resources directory, will use test characters instead")
@@ -70,7 +91,9 @@ func create_test_characters():
 	warrior.rarity = 1
 	warrior.cost = 1
 	warrior.traits = ["Fighter", "Human"]
+	warrior.color = Color(0.8, 0.6, 0.0)  # Goldish brown
 	register_character(warrior)
+	warrior.save_as_resource()
 	
 	# Archer
 	var archer = Character.new()
@@ -88,7 +111,9 @@ func create_test_characters():
 	archer.rarity = 2
 	archer.cost = 2
 	archer.traits = ["Ranger", "Elf"]
+	archer.color = Color(0.0, 0.8, 0.2)  # Green
 	register_character(archer)
+	archer.save_as_resource()
 	
 	# Mage
 	var mage = Character.new()
@@ -106,7 +131,9 @@ func create_test_characters():
 	mage.rarity = 3
 	mage.cost = 3
 	mage.traits = ["Mage", "Human"]
+	mage.color = Color(0.2, 0.4, 0.8)  # Blue
 	register_character(mage)
+	mage.save_as_resource()
 	
 	# Tank
 	var tank = Character.new()
@@ -124,7 +151,9 @@ func create_test_characters():
 	tank.rarity = 4
 	tank.cost = 4
 	tank.traits = ["Guardian", "Dwarf"]
+	tank.color = Color(0.7, 0.7, 0.7)  # Gray/Silver
 	register_character(tank)
+	tank.save_as_resource()
 	
 	# Assassin
 	var assassin = Character.new()
@@ -142,7 +171,9 @@ func create_test_characters():
 	assassin.rarity = 5
 	assassin.cost = 5
 	assassin.traits = ["Assassin", "Shadow"]
+	assassin.color = Color(0.6, 0.0, 0.6)  # Purple
 	register_character(assassin)
+	assassin.save_as_resource()
 
 # Register a single character
 func register_character(character: Character):
@@ -150,9 +181,11 @@ func register_character(character: Character):
 	characters[character.id] = character
 	
 	# Add to rarity pool
-	character_pools[character.rarity].append(character.id)
-	
-	print("Registered character: " + character.display_name + " (Rarity: " + str(character.rarity) + ")")
+	if not character.id in character_pools[character.rarity]:
+		character_pools[character.rarity].append(character.id)
+		print("Registered character: " + character.display_name + " (Rarity: " + str(character.rarity) + ")")
+	else:
+		print("Character already registered: " + character.display_name)
 
 # Get a character by ID
 func get_character(id: String) -> Character:
@@ -183,14 +216,33 @@ func get_shop_roll(player_level: int, num_slots: int = 5) -> Array:
 				chosen_rarity = r + 1  # +1 because rarity starts at 1
 				break
 		
-		# Get a random character from the chosen rarity pool
+		# Try to get a random character from the chosen rarity pool
 		if character_pools[chosen_rarity].size() > 0:
 			var char_id = character_pools[chosen_rarity].pick_random()
 			result.append(char_id)
 		else:
-			# Fallback to common if this rarity has no units
-			if character_pools[1].size() > 0: # COMMON
-				var char_id = character_pools[1].pick_random()
-				result.append(char_id)
+			# Fallback: try to find any character with lower rarity
+			var found = false
+			for r in range(chosen_rarity, 0, -1):
+				if character_pools[r].size() > 0:
+					var char_id = character_pools[r].pick_random()
+					result.append(char_id)
+					found = true
+					break
+			
+			# If still nothing found, try higher rarities
+			if not found:
+				for r in range(chosen_rarity + 1, 6):
+					if character_pools[r].size() > 0:
+						var char_id = character_pools[r].pick_random()
+						result.append(char_id)
+						found = true
+						break
+			
+			# If absolutely nothing found, append a placeholder
+			if not found:
+				# This should not happen if characters are properly registered
+				print("WARNING: No characters available for shop slot")
+				result.append("")
 	
 	return result

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="Character" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/Character.gd" id="1_kdcb1"]
+
+[resource]
+script = ExtResource("1_kdcb1")
+id = "healer"
+display_name = "Priestess"
+description = "A devoted healer who restores health to nearby allies."
+health = 90
+attack_damage = 8
+attack_speed = 0.8
+range = 3
+armor = 5
+magic_resist = 15
+mana_max = 120
+movement_speed = 2.6
+rarity = 3
+cost = 3
+shop_weight = 1
+traits = Array[String](["Support", "Divine"])
+ability_name = "Healing Light"
+ability_description = "Restores 30 health to the lowest health ally"
+ability_damage = -30
+ability_mana_cost = 60
+color = Color(1, 0.9, 0.4, 1)

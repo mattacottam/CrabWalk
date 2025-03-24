@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="Character" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/Character.gd" id="1_fwj3a"]
+
+[resource]
+script = ExtResource("1_fwj3a")
+id = "druid"
+display_name = "Druid"
+description = "A nature mage who controls plants and animals."
+health = 100
+attack_damage = 14
+attack_speed = 0.85
+range = 3
+armor = 8
+magic_resist = 20
+mana_max = 90
+movement_speed = 3.0
+rarity = 2
+cost = 2
+shop_weight = 1
+traits = Array[String](["Shapeshifter", "Nature"])
+ability_name = "Entangling Roots"
+ability_description = "Immobilizes enemies in a target area for 3 seconds"
+ability_damage = 15
+ability_mana_cost = 65
+color = Color(0.2, 0.8, 0.3, 1)

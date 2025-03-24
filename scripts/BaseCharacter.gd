@@ -3,6 +3,14 @@ extends CharacterBody3D
 # Character data
 var character_data = null
 
+# Visual elements
+var character_mesh = null
+var character_material = null
+
+# UI elements
+var nameplate = null
+var health_bar = null
+
 # Drag and drop properties
 var is_dragging = false
 var drag_height = 0.5  # Increased height for floating effect
@@ -21,8 +29,8 @@ var sell_zone = null
 
 # Animation references
 @onready var animation_player = $Armature/AnimationPlayer if has_node("Armature/AnimationPlayer") else null
-const IDLE_ANIM = "Unarmed_Idle/mixamo_com"
-const DRAG_ANIM = "Fall_and_Loop/mixamo_com"
+const IDLE_ANIM = "unarmed idle 01/mixamo_com"
+const DRAG_ANIM = "fall a loop/mixamo_com"
 
 # Collision shape for better click detection
 var collision_shape
@@ -51,6 +59,63 @@ func _ready():
 	# Start idle animation
 	if animation_player:
 		animation_player.play(IDLE_ANIM)
+	
+	# If we already have character data, apply it
+	if character_data:
+		apply_character_visuals()
+	
+	# Create UI elements
+	create_ui_elements()
+
+# Create nameplate and health bar
+func create_ui_elements():
+	# Create a Billboard node for the nameplate
+	var billboard = Node3D.new()
+	billboard.name = "UiBillboard"
+	billboard.top_level = true  # Independent transform
+	add_child(billboard)
+	
+	# Position it above the character
+	billboard.position = Vector3(0, 2.2, 0)
+	
+	# Create the nameplate label
+	nameplate = Label3D.new()
+	nameplate.name = "Nameplate"
+	nameplate.text = character_data.display_name if character_data else "Character"
+	nameplate.font_size = 16
+	nameplate.outline_size = 2
+	nameplate.position = Vector3(0, 0.3, 0)
+	billboard.add_child(nameplate)
+	
+	# Create a health bar
+	health_bar = MeshInstance3D.new()
+	health_bar.name = "HealthBar"
+	
+	# Create a cube mesh for the health bar
+	var box_mesh = BoxMesh.new()
+	box_mesh.size = Vector3(1.0, 0.1, 0.1)  # Width, height, depth
+	health_bar.mesh = box_mesh
+	
+	# Create material for the health bar
+	var health_material = StandardMaterial3D.new()
+	health_material.albedo_color = Color(0.2, 0.8, 0.2)  # Green
+	health_bar.material_override = health_material
+	
+	# Position the health bar
+	health_bar.position = Vector3(0, 0, 0)
+	billboard.add_child(health_bar)
+	
+	# Update UI with character data
+	update_ui()
+
+# Update UI elements based on character data
+func update_ui():
+	if character_data and nameplate:
+		nameplate.text = character_data.display_name
+		
+		# Set nameplate color based on rarity
+		var rarity_color = character_data.get_rarity_color()
+		nameplate.modulate = rarity_color
 
 # Ensure there's a proper collision shape for clicking
 func ensure_collision():
@@ -71,9 +136,46 @@ func ensure_collision():
 		collision_layer = 1
 		collision_mask = 0  # Don't need the character to detect collisions, just be clickable
 
-# Set character data (called by shop system)
+# Set character data and apply visuals
 func set_character_data(data):
 	character_data = data
+	apply_character_visuals()
+	update_ui()
+
+# Apply visual customizations based on character data
+func apply_character_visuals():
+	if not character_data:
+		return
+	
+	# Find the mesh instance to apply materials to
+	find_character_mesh(self)
+	
+	if character_mesh:
+		# Either create a new material or get the existing one
+		if not character_material:
+			character_material = StandardMaterial3D.new()
+		
+		# Apply character color
+		character_material.albedo_color = character_data.color
+		
+		# Apply to mesh
+		character_mesh.material_override = character_material
+		
+		print("Applied visuals for: " + character_data.display_name)
+	else:
+		print("No suitable mesh found for character visuals")
+
+# Recursively find a suitable mesh to apply materials to
+func find_character_mesh(node):
+	for child in node.get_children():
+		if child is MeshInstance3D:
+			character_mesh = child
+			return
+		
+		if child.get_child_count() > 0:
+			find_character_mesh(child)
+			if character_mesh:
+				return
 
 # Get character data
 func get_character_data():

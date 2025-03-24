@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="Character" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/Character.gd" id="1_p61gy"]
+
+[resource]
+script = ExtResource("1_p61gy")
+id = "knight"
+display_name = "Knight"
+description = "A valiant defender who shields allies from harm."
+health = 140
+attack_damage = 12
+attack_speed = 0.9
+range = 1
+armor = 25
+magic_resist = 15
+mana_max = 100
+movement_speed = 2.8
+rarity = 2
+cost = 2
+shop_weight = 1
+traits = Array[String](["Guardian", "Noble"])
+ability_name = "Shield Wall"
+ability_description = "Creates a barrier that absorbs damage for nearby allies"
+ability_damage = 0
+ability_mana_cost = 70
+color = Color(0.7, 0.7, 0.9, 1)

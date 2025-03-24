@@ -1,44 +1,7 @@
-[gd_scene load_steps=53 format=4 uid="uid://cmo28qa2tkkf3"]
+[gd_scene load_steps=16 format=4 uid="uid://cmo28qa2tkkf3"]
 
 [ext_resource type="Script" uid="uid://dhxrsyaocnnkp" path="res://scripts/BaseCharacter.gd" id="1_xktx3"]
-[ext_resource type="AnimationLibrary" uid="uid://bytmij175y3mc" path="res://assets/animations/Base_Pro/fall a land to standing idle 01.fbx" id="2_whuhp"]
 [ext_resource type="AnimationLibrary" uid="uid://bpu6v643lmdqp" path="res://assets/animations/Base_Pro/fall a loop.fbx" id="3_65ir8"]
-[ext_resource type="AnimationLibrary" uid="uid://cuig261vb0i1q" path="res://assets/animations/Base_Pro/fall a land to run forward.fbx" id="4_jel4w"]
-[ext_resource type="AnimationLibrary" uid="uid://d4i54fy2domdr" path="res://assets/animations/Base_Pro/standing aim walk left.fbx" id="5_ukkxi"]
-[ext_resource type="AnimationLibrary" uid="uid://djhnpe7qjwh4r" path="res://assets/animations/Base_Pro/standing aim overdraw.fbx" id="6_oncki"]
-[ext_resource type="AnimationLibrary" uid="uid://1i1osnqofymh" path="res://assets/animations/Base_Pro/standing aim recoil.fbx" id="7_j7a7g"]
-[ext_resource type="AnimationLibrary" uid="uid://b8pou44tgokv" path="res://assets/animations/Base_Pro/standing aim walk back.fbx" id="8_r5ne5"]
-[ext_resource type="AnimationLibrary" uid="uid://y7ehk5avem47" path="res://assets/animations/Base_Pro/standing aim walk forward.fbx" id="9_lxeks"]
-[ext_resource type="AnimationLibrary" uid="uid://dumcberbgtrcs" path="res://assets/animations/Base_Pro/standing aim walk right.fbx" id="10_y5xi1"]
-[ext_resource type="AnimationLibrary" uid="uid://ckkxl57s0h3ej" path="res://assets/animations/Base_Pro/standing block.fbx" id="11_4iv2w"]
-[ext_resource type="AnimationLibrary" uid="uid://keb2xoisfmpv" path="res://assets/animations/Base_Pro/standing death backward 01.fbx" id="12_x37o0"]
-[ext_resource type="AnimationLibrary" uid="uid://cm48newm2acoq" path="res://assets/animations/Base_Pro/standing death forward 01.fbx" id="13_3ncxk"]
-[ext_resource type="AnimationLibrary" uid="uid://cc06h1lp0gakf" path="res://assets/animations/Base_Pro/standing disarm bow.fbx" id="14_x4vja"]
-[ext_resource type="AnimationLibrary" uid="uid://cwn734vx4l73s" path="res://assets/animations/Base_Pro/standing dive forward.fbx" id="15_cg73r"]
-[ext_resource type="AnimationLibrary" uid="uid://bgibwym87yu0w" path="res://assets/animations/Base_Pro/standing dodge backward.fbx" id="16_g2f0i"]
-[ext_resource type="AnimationLibrary" uid="uid://ciruksai84cn0" path="res://assets/animations/Base_Pro/standing dodge forward.fbx" id="17_l36li"]
-[ext_resource type="AnimationLibrary" uid="uid://b580i66u7uruh" path="res://assets/animations/Base_Pro/standing dodge left.fbx" id="18_j0bqq"]
-[ext_resource type="AnimationLibrary" uid="uid://b8ll5l0htyp3s" path="res://assets/animations/Base_Pro/standing dodge right.fbx" id="19_cq1ad"]
-[ext_resource type="AnimationLibrary" uid="uid://b7sc0l5fsx21s" path="res://assets/animations/Base_Pro/standing draw arrow.fbx" id="20_1ljms"]
-[ext_resource type="AnimationLibrary" uid="uid://oitxnlgkiw57" path="res://assets/animations/Base_Pro/standing equip bow.fbx" id="21_q2r2q"]
-[ext_resource type="AnimationLibrary" uid="uid://c7vmsdgu6nwd5" path="res://assets/animations/Base_Pro/standing idle 01.fbx" id="22_dgu7i"]
-[ext_resource type="AnimationLibrary" uid="uid://dwlchg2sef7ux" path="res://assets/animations/Base_Pro/standing idle 03 examine.fbx" id="23_xcgxc"]
-[ext_resource type="AnimationLibrary" uid="uid://cbvof3caaycj0" path="res://assets/animations/Base_Pro/standing idle 02 looking.fbx" id="24_37d2u"]
-[ext_resource type="AnimationLibrary" uid="uid://bf26coxgqqr40" path="res://assets/animations/Base_Pro/standing melee kick.fbx" id="25_vmuc6"]
-[ext_resource type="AnimationLibrary" uid="uid://bmceawnt7qgmm" path="res://assets/animations/Base_Pro/standing melee punch.fbx" id="26_4ldap"]
-[ext_resource type="AnimationLibrary" uid="uid://boq2e51xrktov" path="res://assets/animations/Base_Pro/standing react small from front.fbx" id="27_pndtn"]
-[ext_resource type="AnimationLibrary" uid="uid://bv3ntxouw2c1d" path="res://assets/animations/Base_Pro/standing react small from headshot.fbx" id="28_gsqpx"]
-[ext_resource type="AnimationLibrary" uid="uid://cwyxe4misdhfw" path="res://assets/animations/Base_Pro/standing run back.fbx" id="29_fkxae"]
-[ext_resource type="AnimationLibrary" uid="uid://bawu8upwfein" path="res://assets/animations/Base_Pro/standing run forward.fbx" id="30_us5vr"]
-[ext_resource type="AnimationLibrary" uid="uid://ct7f4hbmp8iry" path="res://assets/animations/Base_Pro/standing run forward stop.fbx" id="31_umdw4"]
-[ext_resource type="AnimationLibrary" uid="uid://b18q51nt324ob" path="res://assets/animations/Base_Pro/standing run left.fbx" id="32_710ua"]
-[ext_resource type="AnimationLibrary" uid="uid://bq4x5qhsastve" path="res://assets/animations/Base_Pro/standing run right.fbx" id="33_7d2ju"]
-[ext_resource type="AnimationLibrary" uid="uid://cerxjpqt7uejf" path="res://assets/animations/Base_Pro/standing turn 90 left.fbx" id="34_mve3r"]
-[ext_resource type="AnimationLibrary" uid="uid://dj8e10nb016ws" path="res://assets/animations/Base_Pro/standing turn 90 right.fbx" id="35_x4qlp"]
-[ext_resource type="AnimationLibrary" uid="uid://bwb4ly74817re" path="res://assets/animations/Base_Pro/standing walk back.fbx" id="36_mieyu"]
-[ext_resource type="AnimationLibrary" uid="uid://bhiy8i5cbmmv2" path="res://assets/animations/Base_Pro/standing walk forward.fbx" id="37_4uf46"]
-[ext_resource type="AnimationLibrary" uid="uid://bu22g1u5dyyho" path="res://assets/animations/Base_Pro/standing walk left.fbx" id="38_h3hke"]
-[ext_resource type="AnimationLibrary" uid="uid://gl11x034klp6" path="res://assets/animations/Base_Pro/standing walk right.fbx" id="39_3dpb2"]
 [ext_resource type="AnimationLibrary" uid="uid://3f1f66rv3xue" path="res://assets/animations/Base_Pro/unarmed idle 01.fbx" id="40_l4ww3"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ycq85"]
@@ -987,45 +950,8 @@ skin = SubResource("Skin_wqqe0")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="Armature"]
 libraries = {
-&"Fall_and_Land_to_Standing_Idle": ExtResource("2_whuhp"),
-&"Fall_and_Loop": ExtResource("3_65ir8"),
-&"Fall_and_Run_Forward": ExtResource("4_jel4w"),
-&"Standard_Aim_Walk_Left": ExtResource("5_ukkxi"),
-&"Standing_Aim_Overdraw": ExtResource("6_oncki"),
-&"Standing_Aim_Recoil": ExtResource("7_j7a7g"),
-&"Standing_Aim_Walk_Back": ExtResource("8_r5ne5"),
-&"Standing_Aim_Walk_Forward": ExtResource("9_lxeks"),
-&"Standing_Aim_Walk_Right": ExtResource("10_y5xi1"),
-&"Standing_Block": ExtResource("11_4iv2w"),
-&"Standing_Death_Backward": ExtResource("12_x37o0"),
-&"Standing_Death_Forward": ExtResource("13_3ncxk"),
-&"Standing_Disarm_Bow": ExtResource("14_x4vja"),
-&"Standing_Dive_Forward": ExtResource("15_cg73r"),
-&"Standing_Dodge_Backward": ExtResource("16_g2f0i"),
-&"Standing_Dodge_Forward": ExtResource("17_l36li"),
-&"Standing_Dodge_Left": ExtResource("18_j0bqq"),
-&"Standing_Dodge_Right": ExtResource("19_cq1ad"),
-&"Standing_Draw_Arrow": ExtResource("20_1ljms"),
-&"Standing_Equip_Bow": ExtResource("21_q2r2q"),
-&"Standing_Idle": ExtResource("22_dgu7i"),
-&"Standing_Idle_Examine": ExtResource("23_xcgxc"),
-&"Standing_Idle_Looking": ExtResource("24_37d2u"),
-&"Standing_Melee_Kick": ExtResource("25_vmuc6"),
-&"Standing_Melee_punch": ExtResource("26_4ldap"),
-&"Standing_React_Small_from_Front": ExtResource("27_pndtn"),
-&"Standing_React_Small_from_Headshot": ExtResource("28_gsqpx"),
-&"Standing_Run_Back": ExtResource("29_fkxae"),
-&"Standing_Run_Forward": ExtResource("30_us5vr"),
-&"Standing_Run_Forward_Stop": ExtResource("31_umdw4"),
-&"Standing_Run_Left": ExtResource("32_710ua"),
-&"Standing_Run_right": ExtResource("33_7d2ju"),
-&"Standing_Turn_90_Left": ExtResource("34_mve3r"),
-&"Standing_Turn_90_Right": ExtResource("35_x4qlp"),
-&"Standing_Walk_Back": ExtResource("36_mieyu"),
-&"Standing_Walk_Forward": ExtResource("37_4uf46"),
-&"Standing_Walk_Left": ExtResource("38_h3hke"),
-&"Standing_Walk_Right": ExtResource("39_3dpb2"),
-&"Unarmed_Idle": ExtResource("40_l4ww3")
+&"fall a loop": ExtResource("3_65ir8"),
+&"unarmed idle 01": ExtResource("40_l4ww3")
 }
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
