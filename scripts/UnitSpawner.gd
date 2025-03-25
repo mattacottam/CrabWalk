@@ -138,7 +138,6 @@ func spawn_selected_unit():
 	# Find the first unoccupied bench tile
 	spawn_unit_on_bench(character_data)
 
-# Spawn a character on the first available bench slot
 func spawn_unit_on_bench(character_data):
 	if not board:
 		print("ERROR: Board not found")
@@ -153,6 +152,10 @@ func spawn_unit_on_bench(character_data):
 			var character = character_scene.instantiate()
 			board.add_child(character)
 			
+			# Ensure star level is set (default to 1 if not present)
+			if character_data.star_level <= 0:
+				character_data.star_level = 1
+				
 			# Set character data
 			character.set_character_data(character_data)
 			
@@ -162,7 +165,18 @@ func spawn_unit_on_bench(character_data):
 			# Set the occupying unit reference
 			tile.set_occupying_unit(character)
 			
-			print("Spawned " + character_data.display_name + " on bench slot %d" % i)
+			print("Spawned " + character_data.display_name + " (Star " + str(character_data.star_level) + ") on bench slot %d" % i)
+			
+			# Add a delay before checking for combines, without capturing the character reference
+			character.combine_cooldown = true
+			var timer = get_tree().create_timer(0.2)
+			await timer.timeout
+			
+			# Only proceed if the character still exists
+			if is_instance_valid(character):
+				character.combine_cooldown = false
+				character.check_for_automatic_combine()
+			
 			return
 	
 	print("No empty bench slots available")
@@ -213,3 +227,33 @@ func clear_bench():
 			if unit:
 				unit.queue_free()
 			tile.set_occupying_unit(null)
+
+# Spawn test star level units for combining
+func spawn_test_star_units():
+	print("Spawning test units for star combining")
+	
+	# Clear the bench first
+	clear_bench()
+	
+	# Pick a character
+	var char_id = "warrior"  # Use warrior as test
+	if character_database and character_database.characters.has(char_id):
+		var base_character = character_database.characters[char_id]
+		
+		# Spawn 3 of the same 1-star warrior
+		for i in range(3):
+			var character_data = base_character.duplicate()
+			character_data.star_level = 1
+			spawn_unit_on_bench(character_data)
+			
+		# Also spawn a 2-star warrior with 2 more 1-stars to test cascading combines
+		if board.BENCH_SPACES >= 6:
+			var upgraded_character = base_character.duplicate()
+			upgraded_character.star_level = 2
+			spawn_unit_on_bench(upgraded_character)
+			
+			# Add 2 more 1-stars
+			for i in range(2):
+				var character_data = base_character.duplicate()
+				character_data.star_level = 1
+				spawn_unit_on_bench(character_data)

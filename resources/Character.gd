@@ -10,7 +10,7 @@ class_name Character
 @export var health: int = 100
 @export var attack_damage: int = 10
 @export var attack_speed: float = 1.0
-@export var attack_range: int = 1
+@export var attack_range: int = 1  # Renamed from range to avoid built-in conflict
 @export var armor: int = 0
 @export var magic_resist: int = 0
 @export var mana_max: int = 100
@@ -21,6 +21,7 @@ class_name Character
 @export var rarity: int = 1  # 1=common, 2=uncommon, 3=rare, 4=epic, 5=legendary
 @export var cost: int = 1
 @export var shop_weight: int = 1  # Higher value = more common in the shop pool
+@export var star_level: int = 1  # 1, 2, or 3 stars
 
 # Traits/synergies
 @export var traits: Array = []

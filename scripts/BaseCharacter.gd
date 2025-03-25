@@ -2,6 +2,7 @@ extends CharacterBody3D
 
 # Character data
 var character_data = null
+var star_level = 1  # Current star level of this unit instance
 
 # Current stats
 var current_health: int = 100
@@ -13,6 +14,20 @@ var max_mana: int = 100
 var character_mesh = null
 var character_material = null
 var health_bar_system = null
+
+# Star visuals
+var combine_cooldown = false
+var star_decorations = []
+const STAR_COLORS = {
+	1: Color(0.8, 0.8, 0.2),  # Gold
+	2: Color(0.6, 0.8, 1.0),  # Light blue
+	3: Color(1.0, 0.3, 0.7)   # Pink/purple
+}
+const STAR_SCALES = {
+	1: Vector3(1.0, 1.0, 1.0),
+	2: Vector3(1.15, 1.15, 1.15),
+	3: Vector3(1.3, 1.3, 1.3)
+}
 
 # UI elements
 var nameplate = null
@@ -88,6 +103,15 @@ func _ready():
 	if health_bar_system:
 		health_bar_system.update_health_display(current_health)
 		health_bar_system.update_mana_display(current_mana)
+	
+	# Initialize star level from character data
+	if character_data:
+		set_star_level(character_data.star_level)
+	else:
+		set_star_level(1)
+	
+	# Trigger automatic combine check (delayed to ensure everything is set up)
+	call_deferred("check_for_automatic_combine")
 
 # Initialize character stats from character_data
 func initialize_stats():
@@ -96,11 +120,16 @@ func initialize_stats():
 		current_health = max_health
 		max_mana = character_data.mana_max
 		
+		# Scale stats based on star level
+		if character_data.star_level == 2:
+			max_health = int(max_health * 1.8)  # 80% increase
+			current_health = max_health
+		elif character_data.star_level == 3:
+			max_health = int(max_health * 3.2)  # 220% increase from level 1
+			current_health = max_health
+		
 		# Use starting_mana from character data if available
-		if character_data.get("starting_mana") != null:
-			current_mana = character_data.starting_mana
-		else:
-			current_mana = 0
+		current_mana = character_data.starting_mana
 		
 		# Make sure current_mana is not more than max_mana
 		current_mana = min(current_mana, max_mana)
@@ -366,6 +395,9 @@ func end_drag():
 		else:
 			# Move to the new tile
 			snap_to_tile(target_tile)
+			
+		# Check for automatic combining after move
+		call_deferred("check_for_automatic_combine")
 	else:
 		# Return to original position if target is invalid or too far
 		global_position = original_position
@@ -389,6 +421,7 @@ func is_over_sell_zone():
 	# If we're within 2 units of the sell zone's center, consider it a hit
 	return distance < 2.0
 
+
 func sell_unit():
 	# Tell the original tile we're no longer there
 	if original_tile:
@@ -397,19 +430,67 @@ func sell_unit():
 	# Update player gold (assuming you have a Player singleton or similar)
 	var player = get_node_or_null("/root/GameBoard/Player")
 	if player:
-		# Get sell value based on character_data if available
-		var sell_value = 3  # Default value
-		if character_data != null:
-			# Safely check if we can access cost property
-			if typeof(character_data) == TYPE_OBJECT and character_data.get("cost") != null:
-				sell_value = character_data.cost
-			# If it's a dictionary
-			elif typeof(character_data) == TYPE_DICTIONARY and "cost" in character_data:
-				sell_value = character_data["cost"]
+		# Get base cost from character data
+		var base_cost = 1  # Default value
 		
+		if character_data and character_data.get("cost") != null:
+			base_cost = character_data.cost
+		
+		# Calculate sell value based on star level
+		var sell_value = 0
+		
+		if base_cost == 1: # No sell penalty for 1-cost units.
+			match star_level:
+				1:
+					sell_value = 1
+				2:
+					sell_value = 3
+				3:
+					sell_value = 9
+		else:
+			match star_level:
+				1:
+					# 1-star: just the base cost
+					sell_value = base_cost
+				2:
+					# 2-star: (cost × 3) - 1 (the price of three 1-stars, minus 1)
+					sell_value = (base_cost * 3) - 1
+				3:
+					# 3-star: (cost × 9) - 2 (the price of nine 1-stars, minus 2)
+					sell_value = (base_cost * 9) - 1
+		
+		# Ensure value is at least 1
+		sell_value = max(sell_value, 1)
+		
+		print("Selling " + str(star_level) + "-star unit for " + str(sell_value) + " gold")
+		
+		# Add gold
 		player.add_gold(sell_value)
+		
+		# Create the gold text effect
+		if is_instance_valid(board):
+			# Create the animation and capture position BEFORE deleting the unit
+			var pos = global_position
+			
+			# Create the Label3D as a child of board, not of this unit
+			var world_label = Label3D.new()
+			world_label.text = "+" + str(sell_value) + " gold"
+			world_label.font_size = 72
+			world_label.modulate = Color(1.0, 0.84, 0.0)  # Gold color
+			world_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			world_label.position = pos + Vector3(0, 2, 0)
+			board.add_child(world_label)
+			
+			# Animate the label
+			var tween = board.create_tween()
+			tween.tween_property(world_label, "position", world_label.position + Vector3(0, 1.5, 0), 0.8)
+			tween.parallel().tween_property(world_label, "modulate:a", 0.0, 0.8)
+			
+			# Create an independent timer in the board to remove the label
+			var timer = get_tree().create_timer(0.8)
+			timer.connect("timeout", func(): world_label.queue_free())
 	
-	# Delete the unit
+	# Delete the unit immediately
 	queue_free()
 
 func swap_with_unit(other_unit, target_tile):
@@ -449,3 +530,203 @@ func test_health_damage():
 	timer = get_tree().create_timer(1.0)
 	await timer.timeout
 	add_mana(30)
+
+# Set the star level for this unit
+func set_star_level(level: int):
+	star_level = clamp(level, 1, 3)
+	
+	# Update character data's star level as well
+	if character_data:
+		character_data.star_level = star_level
+	
+	# Update scale based on star level
+	scale = STAR_SCALES[star_level]
+	
+	# Create star decorations
+	update_star_decorations()
+
+# Create visual star decorations
+func update_star_decorations():
+	# Remove any existing star decorations
+	for star in star_decorations:
+		if is_instance_valid(star):
+			star.queue_free()
+	star_decorations.clear()
+	
+	# Create stars based on star level
+	var star_color = STAR_COLORS[star_level]
+	
+	for i in range(star_level):
+		var star = create_star_mesh(star_color)
+		add_child(star)
+		
+		# Position stars horizontally above the unit
+		var offset = (i - (star_level-1)/2.0) * 0.3  # Center the stars
+		star.position = Vector3(offset, 2.2, 0)
+		star_decorations.append(star)
+
+# Create a star mesh
+func create_star_mesh(color: Color) -> MeshInstance3D:
+	var star = MeshInstance3D.new()
+	
+	# Use a simple shape for the star (can be improved later)
+	var sphere = SphereMesh.new()
+	sphere.radius = 0.1
+	sphere.height = 0.2
+	star.mesh = sphere
+	
+	# Create glowing material
+	var material = StandardMaterial3D.new()
+	material.albedo_color = color
+	material.emission_enabled = true
+	material.emission = color
+	material.emission_energy_multiplier = 2.0
+	star.material_override = material
+	
+	return star
+
+# Check if this unit can combine with another
+func can_combine_with(other_unit) -> bool:
+	if not character_data or not other_unit or not other_unit.character_data:
+		return false
+		
+	# Must be same character and same star level
+	return character_data.id == other_unit.character_data.id and star_level == other_unit.star_level and star_level < 3
+
+# Find all matching units on the board of the same type and star level
+func find_matching_units():
+	var matching_units = [self]  # Start with self
+	
+	if not board or not character_data:
+		return matching_units
+	
+	# Look through all tiles for matching units
+	for tile_key in board.tiles:
+		var tile = board.tiles[tile_key]
+		if tile.is_occupied():
+			var unit = tile.get_occupying_unit()
+			
+			# Skip self
+			if unit == self:
+				continue
+				
+			# Check if it's the same type and star level
+			if unit and unit.character_data and unit.character_data.id == character_data.id and unit.star_level == star_level:
+				matching_units.append(unit)
+				
+				# If we found 3 total, that's enough for a combination
+				if matching_units.size() >= 3:
+					break
+	
+	return matching_units
+
+# Check for automatic combining opportunities
+func check_for_automatic_combine():
+	# Don't combine if already on cooldown
+	if combine_cooldown:
+		return
+		
+	# Make sure we can combine (star level < 3)
+	if star_level >= 3 or not character_data:
+		return
+	
+	# Find all matching units
+	var matching_units = find_matching_units()
+	
+	# If we have 3 matching units, combine them
+	if matching_units.size() >= 3:
+		# Set cooldown to prevent recursion
+		combine_cooldown = true
+		
+		# Perform the combination
+		combine_units(matching_units)
+		
+		# Reset cooldown after a delay
+		var timer = get_tree().create_timer(1.0)
+		await timer.timeout
+		combine_cooldown = false
+
+# Combine three units into one higher star level unit
+func combine_units(units_to_combine):
+	# Choose the first unit's tile as the target
+	var target_tile = board.get_tile_at_position(units_to_combine[0].global_position)
+	
+	# Free the original tiles
+	for unit in units_to_combine:
+		var tile = board.get_tile_at_position(unit.global_position)
+		if tile:
+			tile.set_occupying_unit(null)
+	
+	# Create new unit at the target tile
+	var character_scene = load("res://scenes/characters/BaseCharacter.tscn")
+	var new_unit = character_scene.instantiate()
+	board.add_child(new_unit)
+	
+	# Copy character data but increase star level
+	var new_char_data = units_to_combine[0].character_data.duplicate()
+	var new_star_level = units_to_combine[0].star_level + 1
+	new_char_data.star_level = new_star_level
+	
+	# Set up the new unit
+	new_unit.set_character_data(new_char_data)
+	# Explicitly set star level again to make sure it's correct
+	new_unit.set_star_level(new_star_level)
+	
+	# Position at the target tile
+	new_unit.global_position = target_tile.get_center_position()
+	target_tile.set_occupying_unit(new_unit)
+	
+	# Create a visual effect for the combination
+	create_combine_effect(target_tile.global_position)
+	
+	# Remove the original units
+	for unit in units_to_combine:
+		unit.queue_free()
+	
+	# Add a delay before checking for further combinations to prevent recursion issues
+	var timer = get_tree().create_timer(0.5)
+	await timer.timeout
+	
+	# Check for further combinations (for cascading combines)
+	if is_instance_valid(new_unit):
+		new_unit.check_for_automatic_combine()
+
+# Create visual effect for combining
+func create_combine_effect(pos: Vector3):
+	# Create particle effect node
+	var particles = GPUParticles3D.new()
+	particles.position = pos
+	particles.position.y += 1.0  # Raise a bit
+	particles.one_shot = true
+	particles.explosiveness = 0.8
+	particles.lifetime = 1.5
+	particles.emitting = true
+	particles.amount = 30
+	
+	# Create particle material
+	var material = ParticleProcessMaterial.new()
+	material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	material.emission_sphere_radius = 0.5
+	material.direction = Vector3(0, 1, 0)
+	material.spread = 180.0
+	material.gravity = Vector3(0, 2, 0)
+	material.initial_velocity_min = 2.0
+	material.initial_velocity_max = 5.0
+	material.scale_min = 0.2
+	material.scale_max = 0.5
+	material.color = STAR_COLORS[min(star_level + 1, 3)]
+	particles.process_material = material
+	
+	# Create mesh for particles
+	var mesh = SphereMesh.new()
+	mesh.radius = 0.1
+	mesh.height = 0.2
+	particles.draw_pass_1 = mesh
+	
+	# Add to scene and start
+	board.add_child(particles)
+	
+	# Remove after effect completes
+	var timer = get_tree().create_timer(particles.lifetime * 1.5)
+	await timer.timeout
+	particles.queue_free()
