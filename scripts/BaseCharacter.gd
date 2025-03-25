@@ -57,6 +57,8 @@ const DRAG_ANIM = "fall a loop/mixamo_com"
 var collision_shape
 
 func _ready():
+	test_health_damage()
+	
 	# Find the board in the scene
 	board = get_node("/root/GameBoard")
 	
@@ -519,16 +521,19 @@ func snap_to_tile(tile):
 
 # Function to test the health bar (for debugging)
 func test_health_damage():
-	take_damage(10)
+	# Add a timer to take damage after a few second
+	await get_tree().create_timer(3.0).timeout
+	print("Damage taken (100)")
+	take_damage(100)
 	
 	# Add a timer to heal after a second
-	var timer = get_tree().create_timer(1.0)
-	await timer.timeout
-	heal(5)
+	await get_tree().create_timer(3.0).timeout
+	print("Healed (50)")
+	heal(50)
 	
 	# Add mana
-	timer = get_tree().create_timer(1.0)
-	await timer.timeout
+	await get_tree().create_timer(3.0).timeout
+	print("Gained mana (50)")
 	add_mana(30)
 
 # Set the star level for this unit
@@ -606,19 +611,16 @@ func find_matching_units():
 		if tile.is_occupied():
 			var unit = tile.get_occupying_unit()
 			
-			# Skip self
-			if unit == self:
+			# Skip self and already included units
+			if unit == null or matching_units.has(unit):
 				continue
 				
 			# Check if it's the same type and star level
-			if unit and unit.character_data and unit.character_data.id == character_data.id and unit.star_level == star_level:
+			if unit.character_data and unit.character_data.id == character_data.id and unit.star_level == star_level:
 				matching_units.append(unit)
-				
-				# If we found 3 total, that's enough for a combination
-				if matching_units.size() >= 3:
-					break
 	
 	return matching_units
+
 
 # Check for automatic combining opportunities
 func check_for_automatic_combine():
@@ -633,8 +635,8 @@ func check_for_automatic_combine():
 	# Find all matching units
 	var matching_units = find_matching_units()
 	
-	# If we have 3 matching units, combine them
-	if matching_units.size() >= 3:
+	# If we have EXACTLY 3 matching units, combine them
+	if matching_units.size() == 3:
 		# Set cooldown to prevent recursion
 		combine_cooldown = true
 		

@@ -19,6 +19,7 @@ movement_speed = 2.8
 rarity = 1
 cost = 1
 shop_weight = 1
+star_level = 1
 traits = ["Fighter", "Human"]
 ability_name = "Battle Cry"
 ability_description = "Increases armor for nearby allies for 5 seconds."
