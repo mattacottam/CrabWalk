@@ -650,6 +650,10 @@ func check_for_automatic_combine():
 	if combine_cooldown:
 		return
 		
+	# Don't combine enemy units automatically
+	if character_data and character_data.is_enemy:
+		return
+		
 	# Make sure we can combine (star level < 3)
 	if star_level >= 3 or not character_data:
 		return
