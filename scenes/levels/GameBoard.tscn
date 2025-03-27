@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://ba833q1t0yowx"]
+[gd_scene load_steps=15 format=3 uid="uid://ba833q1t0yowx"]
 
 [ext_resource type="Script" uid="uid://cg5dl7gwb4ai4" path="res://scripts/GameBoard.gd" id="1_31iy7"]
 [ext_resource type="Script" uid="uid://y0i1bu2qc4wo" path="res://scripts/CharacterDatabase.gd" id="1_77p1f"]
@@ -8,6 +8,8 @@
 [ext_resource type="PackedScene" uid="uid://bdaw3p0vjnv8v" path="res://scenes/ui/ShopUI.tscn" id="5_qfvow"]
 [ext_resource type="Script" uid="uid://cmvblyrj6dyho" path="res://scripts/Player.gd" id="6_qfvow"]
 [ext_resource type="Script" uid="uid://b5muy8x5q7pb7" path="res://scripts/TestHealthBar.gd" id="8_r5hcy"]
+[ext_resource type="Script" uid="uid://bob8qwdqdo0f8" path="res://scripts/EnemyUnitGenerator.gd" id="9_f0wtn"]
+[ext_resource type="Script" uid="uid://cvm3ytv3ge27o" path="res://scripts/BattleManager.gd" id="10_28ang"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_8hsy1"]
 size = Vector2(28, 20)
@@ -99,3 +101,9 @@ vertical_alignment = 1
 
 [node name="HealthTester" type="Node" parent="."]
 script = ExtResource("8_r5hcy")
+
+[node name="EnemyUnitGenerator" type="Node" parent="."]
+script = ExtResource("9_f0wtn")
+
+[node name="BattleManager" type="Node" parent="."]
+script = ExtResource("10_28ang")

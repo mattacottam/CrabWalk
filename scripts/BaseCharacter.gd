@@ -57,7 +57,7 @@ const DRAG_ANIM = "fall a loop/mixamo_com"
 var collision_shape
 
 func _ready():
-	test_health_damage()
+	#test_health_damage()
 	
 	# Find the board in the scene
 	board = get_node("/root/GameBoard")
@@ -199,6 +199,17 @@ func apply_character_visuals():
 		# Apply character color
 		character_material.albedo_color = character_data.color
 		
+		# Add tint for enemies
+		if character_data.is_enemy:
+			# Darken color and add red tint for enemies
+			character_material.albedo_color = character_material.albedo_color.darkened(0.2)
+			character_material.albedo_color = character_material.albedo_color.blend(Color(0.8, 0.2, 0.2))
+			
+			# Add emission for a subtle glow
+			character_material.emission_enabled = true
+			character_material.emission = Color(0.8, 0.0, 0.0)
+			character_material.emission_energy_multiplier = 0.3
+		
 		# Apply to mesh
 		character_mesh.material_override = character_material
 		
@@ -319,6 +330,11 @@ func get_mouse_collision():
 	return space_state.intersect_ray(query)
 
 func start_drag(mouse_pos):
+	# Prevent dragging if this is an enemy unit
+	if character_data and character_data.is_enemy:
+		print("Cannot drag enemy unit")
+		return
+		
 	is_dragging = true
 	
 	# Save our starting position and tile
@@ -595,8 +611,11 @@ func can_combine_with(other_unit) -> bool:
 	if not character_data or not other_unit or not other_unit.character_data:
 		return false
 		
-	# Must be same character and same star level
-	return character_data.id == other_unit.character_data.id and star_level == other_unit.star_level and star_level < 3
+	# Must be same character, same star level, and both must be the same type (player or enemy)
+	return (character_data.id == other_unit.character_data.id and 
+	   star_level == other_unit.star_level and 
+	   star_level < 3 and
+		   character_data.is_enemy == other_unit.character_data.is_enemy)
 
 # Find all matching units on the board of the same type and star level
 func find_matching_units():
@@ -615,8 +634,11 @@ func find_matching_units():
 			if unit == null or matching_units.has(unit):
 				continue
 				
-			# Check if it's the same type and star level
-			if unit.character_data and unit.character_data.id == character_data.id and unit.star_level == star_level:
+			# Check if it's the same type and star level AND same enemy status
+			if (unit.character_data and 
+			   unit.character_data.id == character_data.id and 
+			   unit.star_level == star_level and
+			   unit.character_data.is_enemy == character_data.is_enemy):
 				matching_units.append(unit)
 	
 	return matching_units

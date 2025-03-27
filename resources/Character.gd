@@ -5,6 +5,7 @@ class_name Character
 @export var id: String = ""
 @export var display_name: String = ""
 @export var description: String = ""
+@export var is_enemy: bool = false
 
 # Stats
 @export var health: int = 100
