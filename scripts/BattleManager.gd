@@ -100,9 +100,14 @@ func start_battle():
 	
 	print("Battle started at level " + str(current_level))
 	
-	# In a real implementation, you'd run the battle simulation here
-	# For now, we'll just simulate a battle with a timer
-	simulate_battle()
+	# Get reference to combat system
+	var combat_system = get_node_or_null("/root/GameBoard/CombatSystem")
+	if combat_system:
+		# Let combat system handle the battle simulation
+		combat_system.combat_ended.connect(_on_combat_ended, CONNECT_ONE_SHOT)
+	else:
+		# Fallback to simple simulation if no combat system
+		simulate_battle()
 
 func simulate_battle():
 	# For debugging: just simulate a battle with a timer
@@ -154,6 +159,13 @@ func end_battle():
 	
 	# Re-enable UI
 	start_battle_button.disabled = false
+
+func _on_combat_ended(winner):
+	# Set victory based on winner
+	victory = (winner == "player")
+	
+	# End the battle
+	end_battle()
 
 func reset_game():
 	# Reset to level 1

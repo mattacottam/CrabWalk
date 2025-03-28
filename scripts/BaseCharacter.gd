@@ -52,9 +52,25 @@ var sell_zone = null
 @onready var animation_player = $Armature/AnimationPlayer if has_node("Armature/AnimationPlayer") else null
 const IDLE_ANIM = "unarmed idle 01/mixamo_com"
 const DRAG_ANIM = "fall a loop/mixamo_com"
+const IDLE_COMBAT_ANIM = "standing idle 01/mixamo_com"
+const MOVE_ANIM = "standing walk forward/mixamo_com"
+const ATTACK_ANIM = "standing melee punch/mixamo_com" 
+const TAKE_DAMAGE_ANIM = "standing react small from front/mixamo_com"
+const DYING_ANIM = "standing death backward 01/mixamo_com"
+const VICTORY_ANIM = "standing idle 03 examine/mixamo_com"
 
 # Collision shape for better click detection
 var collision_shape
+
+# Combat state
+var combat_system = null
+var in_combat = false
+var target_unit = null
+var current_path = []
+var move_speed = 2.0
+var current_action = "idle"  # idle, moving, attacking, casting, hurt, dying
+var attack_cooldown = 0.0
+var attack_cooldown_max = 1.0  # Base cooldown, will be adjusted by attack_speed
 
 func _ready():
 	#test_health_damage()
@@ -331,8 +347,8 @@ func get_mouse_collision():
 
 func start_drag(mouse_pos):
 	# Prevent dragging if this is an enemy unit
-	if character_data and character_data.is_enemy:
-		print("Cannot drag enemy unit")
+	if (character_data and character_data.is_enemy) or in_combat:
+		print("Cannot drag unit during combat or enemy units")
 		return
 		
 	is_dragging = true
@@ -758,3 +774,344 @@ func create_combine_effect(pos: Vector3):
 	var timer = get_tree().create_timer(particles.lifetime * 1.5)
 	await timer.timeout
 	particles.queue_free()
+
+func start_combat(combat_sys):
+	combat_system = combat_sys
+	in_combat = true
+	current_action = "idle"
+	attack_cooldown = 0.0
+	
+	# Set attack cooldown based on character attack speed
+	if character_data:
+		attack_cooldown_max = 1.0 / character_data.attack_speed
+	
+	# Connect to combat tick signal
+	if combat_system:
+		if not combat_system.combat_tick.is_connected(update_combat):
+			combat_system.combat_tick.connect(update_combat)
+	
+	# Start idle combat animation
+	play_animation("idle")
+
+func end_combat():
+	in_combat = false
+	combat_system = null
+	current_path.clear()
+	target_unit = null
+	
+	# Return to regular idle animation
+	play_animation("idle")
+
+func update_combat():
+	if not in_combat or not combat_system:
+		return
+	
+	# Reduce attack cooldown
+	if attack_cooldown > 0:
+		attack_cooldown -= combat_system.tick_interval
+	
+	# Main combat state machine
+	match current_action:
+		"idle":
+			# Find target
+			find_target()
+			
+			# If we have a target, either move to it or attack
+			if target_unit:
+				var distance = global_position.distance_to(target_unit.global_position)
+				print(character_data.display_name + " distance to target: " + str(distance))
+				
+				if character_data and distance <= character_data.attack_range * 2.0:
+					# In range, attack
+					start_attack()
+				else:
+					# Out of range, move
+					print(character_data.display_name + " moving to target")
+					move_to_target()
+		
+		"moving":
+			# Check if target still exists
+			if not is_instance_valid(target_unit) or target_unit.current_health <= 0:
+				current_action = "idle"
+				play_animation("idle")
+				target_unit = null
+				return
+			
+			# Check if we're in range now
+			var distance = global_position.distance_to(target_unit.global_position)
+			
+			# Debug info
+			if current_path.size() > 0:
+				print(character_data.display_name + " following path, " + str(current_path.size()) + " steps remaining")
+			else:
+				print(character_data.display_name + " no current path!")
+				
+			if character_data and distance <= character_data.attack_range * 2.0:
+				# In range, attack
+				start_attack()
+				print(character_data.display_name + " in range, attacking")
+			elif current_path.size() == 0:
+				# Need to find a new path
+				print(character_data.display_name + " finding new path")
+				move_to_target()
+			else:
+				# Continue following path
+				continue_movement()
+		
+		"attacking":
+			# Attack is handled automatically once started
+			pass
+		
+		"dying":
+			# Death is handled automatically once started
+			pass
+
+func find_target():
+	if not combat_system:
+		return
+		
+	target_unit = combat_system.get_closest_enemy(self)
+	
+	if target_unit:
+		print(character_data.display_name + " targets " + target_unit.character_data.display_name)
+
+func move_to_target():
+	if not target_unit or not combat_system:
+		current_action = "idle"
+		return
+	
+	# Calculate path to target
+	current_path = combat_system.find_path(self, target_unit.global_position)
+	
+	if current_path.size() <= 1:
+		# No valid path or already at destination
+		print(character_data.display_name + " no valid path found, path size: " + str(current_path.size()))
+		current_action = "idle"
+		return
+	
+	# Remove the first node (current position) if it's our current tile
+	if current_path.size() > 0:
+		var current_tile = board.get_tile_at_position(global_position)
+		if current_path[0] == current_tile:
+			current_path.remove_at(0)
+	
+	print(character_data.display_name + " path found with " + str(current_path.size()) + " steps")
+	
+	# Start moving
+	current_action = "moving"
+	play_animation("move")
+	
+	# Visualize path if debugging
+	if combat_system.debug_pathfinding:
+		combat_system.debug_draw_path(current_path)
+
+func continue_movement():
+	if current_path.size() == 0:
+		current_action = "idle"
+		play_animation("idle")
+		return
+	
+	# Get the next tile
+	var next_tile = current_path[0]
+	var next_pos = next_tile.global_position
+	
+	# Move slightly above the ground
+	next_pos.y = 0.1
+	
+	# Calculate movement
+	var direction = (next_pos - global_position).normalized()
+	var distance = global_position.distance_to(next_pos)
+	var move_distance = move_speed * combat_system.tick_interval
+	
+	print(character_data.display_name + " moving to " + str(next_pos) + ", distance: " + str(distance))
+	
+	# Look at where we're going (just the horizontal direction)
+	var look_target = global_position + Vector3(direction.x, 0, direction.z)
+	
+	# Only do look_at if the direction has length
+	if not global_position.is_equal_approx(look_target):
+		look_at(look_target, Vector3.UP)
+	
+	if move_distance >= distance:
+		# Reached next node, move to it exactly
+		global_position = next_pos
+		
+		# Update tile occupancy
+		var previous_tile = board.get_tile_at_position(original_position)
+		if previous_tile and previous_tile != next_tile:
+			print("Leaving tile: " + str(previous_tile.get_meta("zone", "unknown")) + 
+				  " Row: " + str(previous_tile.get_meta("row", -1)) + 
+				  " Col: " + str(previous_tile.get_meta("col", -1)))
+			previous_tile.set_occupying_unit(null)
+		
+		original_position = global_position
+		next_tile.set_occupying_unit(self)
+		print("Now occupying tile: " + str(next_tile.get_meta("zone", "unknown")) + 
+			  " Row: " + str(next_tile.get_meta("row", -1)) + 
+			  " Col: " + str(next_tile.get_meta("col", -1)))
+		
+		# Remove this node from path
+		current_path.remove_at(0)
+		
+		if current_path.size() == 0:
+			# Reached destination
+			current_action = "idle"
+			play_animation("idle")
+	else:
+		# Move along path
+		global_position += direction * move_distance
+
+func start_attack():
+	if not is_instance_valid(target_unit) or target_unit.current_health <= 0:
+		current_action = "idle"
+		play_animation("idle")
+		target_unit = null
+		return
+	
+	# Only attack if cooldown is ready
+	if attack_cooldown <= 0:
+		# Start attack animation
+		current_action = "attacking"
+		play_animation("attack")
+		
+		# Look at target
+		look_at(target_unit.global_position, Vector3.UP)
+		
+		# Deal damage after animation delay
+		get_tree().create_timer(0.5).connect("timeout", Callable(self, "deal_attack_damage"))
+		
+		# Reset cooldown
+		attack_cooldown = attack_cooldown_max
+	else:
+		# Wait in idle until cooldown is ready
+		current_action = "idle"
+		play_animation("idle")
+
+func deal_attack_damage():
+	if not is_instance_valid(target_unit) or target_unit.current_health <= 0:
+		current_action = "idle"
+		play_animation("idle")
+		target_unit = null
+		return
+	
+	# Calculate damage
+	var damage = character_data.attack_damage if character_data else 10
+	
+	# Apply damage to target
+	target_unit.take_combat_damage(damage, self)
+	
+	# Show damage text
+	show_damage_text(target_unit.global_position, damage)
+	
+	# Return to idle state
+	current_action = "idle"
+	play_animation("idle")
+
+func take_combat_damage(amount, _attacker):
+	# Take damage
+	current_health = max(0, current_health - amount)
+	
+	# Update health bar
+	if health_bar_system:
+		health_bar_system.update_health_display(current_health)
+	
+	# Play damage animation if not dying
+	if current_health > 0:
+		play_animation("hurt")
+		
+		# Return to previous state after animation
+		get_tree().create_timer(0.3).connect("timeout", Callable(self, "resume_after_hit"))
+	else:
+		# Unit is defeated
+		die_in_combat()
+
+func resume_after_hit():
+	if in_combat:
+		current_action = "idle"
+		play_animation("idle")
+
+func die_in_combat():
+	if not in_combat:
+		return
+	
+	current_action = "dying"
+	play_animation("dying")
+	
+	# Release the current tile
+	var current_tile = board.get_tile_at_position(global_position)
+	if current_tile:
+		current_tile.set_occupying_unit(null)
+	
+	# Remove from combat lists
+	if combat_system:
+		combat_system.player_units.erase(self)
+		combat_system.enemy_units.erase(self)
+	
+	# Delay actual removal to allow animation to play
+	get_tree().create_timer(2.0).connect("timeout", Callable(self, "queue_free"))
+
+func show_damage_text(pos, amount):
+	# Create 3D text to show damage
+	var text = Label3D.new()
+	
+	# Add to scene first before setting position
+	board.add_child(text)
+	
+	# Then set text properties
+	text.text = str(amount)
+	text.font_size = 64
+	text.modulate = Color(1, 0.3, 0.3)
+	text.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	
+	# Position above target unit (after adding to scene)
+	text.global_position = pos + Vector3(0, 2, 0)
+	
+	# Animate and remove
+	var tween = board.create_tween()
+	tween.tween_property(text, "global_position", text.global_position + Vector3(0, 1, 0), 1.0)
+	tween.parallel().tween_property(text, "modulate:a", 0.0, 1.0)
+	tween.tween_callback(text.queue_free)
+
+func play_animation(anim_type):
+	if not animation_player:
+		return
+	
+	var anim_name = IDLE_ANIM
+	
+	match anim_type:
+		"idle":
+			anim_name = IDLE_COMBAT_ANIM if in_combat else IDLE_ANIM
+		"move":
+			anim_name = MOVE_ANIM
+		"attack":
+			anim_name = ATTACK_ANIM
+		"hurt":
+			anim_name = TAKE_DAMAGE_ANIM
+		"dying":
+			anim_name = DYING_ANIM
+		"victory":
+			anim_name = VICTORY_ANIM
+	
+	# Check if the animation exists
+	if animation_player.has_animation(anim_name):
+		# Play animation with crossfade
+		animation_player.play(anim_name, 0.2)
+		
+		# Set looping for movement and idle animations
+		if anim_type == "move" or anim_type == "idle":
+			# For Godot 4, we need to connect to the animation_finished signal
+			if not animation_player.animation_finished.is_connected(_on_animation_finished):
+				animation_player.animation_finished.connect(_on_animation_finished)
+	else:
+		print("Animation not found: " + anim_name)
+		
+# Handle animation looping
+func _on_animation_finished(anim_name):
+	# If this was a movement or idle animation, loop it
+	if anim_name == MOVE_ANIM or anim_name == IDLE_COMBAT_ANIM or anim_name == IDLE_ANIM:
+		if current_action == "moving" or current_action == "idle":
+			# Replay the same animation (with no crossfade for smoother loop)
+			animation_player.play(anim_name, 0.0)
+
+func celebrate_victory():
+	play_animation("victory")
