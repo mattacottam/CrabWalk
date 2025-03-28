@@ -12,7 +12,7 @@ var combat_active = false
 var player_units = []
 var enemy_units = []
 var combat_time = 0.0
-var tick_interval = 0.2  # Combat ticks every 0.2 seconds
+var tick_interval = 0.01  # Combat ticks every 0.1 seconds
 var tick_counter = 0
 var max_combat_time = 60.0  # Combat timeout
 
@@ -20,20 +20,21 @@ var max_combat_time = 60.0  # Combat timeout
 var debug_pathfinding = false
 var debug_lines = []
 var debug_timer = 0.0
-var debug_draw_duration = 1.0
+var debug_draw_duration = 3.0
 var debug_drawer = null  # Reference to a Node2D for drawing
 var debug_mesh_instances = []
 var debug_material = null
 var debug_update_timer = 0.0
-var debug_update_interval = 0.5  # Only update debug visuals every 0.5 seconds
+var debug_update_interval = 0.05  # Only update debug visuals every 0.5 seconds
+var unit_debug_meshes = {}
 
 func _ready():
 	if battle_manager:
 		battle_manager.battle_started.connect(_on_battle_started)
 	
-	# Create a debug drawer if needed
-	if debug_pathfinding:
-		create_debug_drawer()
+	# Enable debug pathfinding by default
+	debug_pathfinding = true
+	create_debug_drawer()
 
 func _process(delta):
 	if combat_active:
@@ -72,18 +73,23 @@ func clear_debug_meshes():
 			mesh.queue_free()
 	debug_mesh_instances.clear()
 
-func debug_draw_path(path):
-	# Clear previous debug lines
-	clear_debug_meshes()
+func clear_unit_debug_meshes(unit):
+	if unit in unit_debug_meshes:
+		for mesh in unit_debug_meshes[unit]:
+			if is_instance_valid(mesh):
+				mesh.queue_free()
+		unit_debug_meshes.erase(unit)
+
+func debug_draw_path(path, unit=null):
+	# If unit is provided, we'll create a separate drawing for each unit's path
+	var mesh_instances = []
 	
 	# We need at least 2 points to draw a line
 	if path.size() < 2:
-		return
+		return mesh_instances
 	
-	# Limit visualization to few segments to reduce overhead
-	var max_segments = min(path.size() - 1, 3)  # Show at most 3 segments
-	
-	for i in range(max_segments):
+	# Show all segments
+	for i in range(path.size() - 1):
 		var from_pos = path[i].global_position
 		var to_pos = path[i+1].global_position
 		
@@ -92,13 +98,31 @@ func debug_draw_path(path):
 		to_pos.y += 0.15
 		
 		# Create line mesh
-		create_debug_line(from_pos, to_pos)
+		var line = create_debug_line(from_pos, to_pos)
+		mesh_instances.append(line)
 		
-		# Only create spheres at key points for performance
-		if i == 0:
-			create_debug_sphere(from_pos, 0.1)
-		if i == max_segments - 1:
-			create_debug_sphere(to_pos, 0.1)
+		# Create spheres at all points
+		var start_sphere = create_debug_sphere(from_pos, 0.1) 
+		mesh_instances.append(start_sphere)
+		
+		if i == path.size() - 2:  # Last point
+			var end_sphere = create_debug_sphere(to_pos, 0.1)
+			mesh_instances.append(end_sphere)
+	
+	# Store the meshes with their associated unit if provided
+	if unit:
+		if unit in unit_debug_meshes:
+			# Clear old meshes for this unit
+			for mesh in unit_debug_meshes[unit]:
+				if is_instance_valid(mesh):
+					mesh.queue_free()
+		
+		unit_debug_meshes[unit] = mesh_instances
+	else:
+		# For general debug meshes not tied to a specific unit
+		debug_mesh_instances.append_array(mesh_instances)
+	
+	return mesh_instances
 
 # Create a 3D line between two points
 func create_debug_line(start, end):
@@ -106,7 +130,6 @@ func create_debug_line(start, end):
 	
 	# Add to scene first so it's in the tree
 	board.add_child(mesh_instance)
-	debug_mesh_instances.append(mesh_instance)
 	
 	# Create line mesh
 	var direction = end - start
@@ -136,6 +159,8 @@ func create_debug_line(start, end):
 	
 	# Apply material
 	mesh_instance.material_override = debug_material
+	
+	return mesh_instance
 
 # Create a sphere at a point
 func create_debug_sphere(position, radius):
@@ -143,7 +168,6 @@ func create_debug_sphere(position, radius):
 	
 	# Add to scene first
 	board.add_child(mesh_instance)
-	debug_mesh_instances.append(mesh_instance)
 	
 	# Create sphere mesh
 	var sphere = SphereMesh.new()
@@ -156,6 +180,8 @@ func create_debug_sphere(position, radius):
 	
 	# Apply material
 	mesh_instance.material_override = debug_material
+	
+	return mesh_instance
 
 func create_debug_drawer_script():
 	var script = GDScript.new()
@@ -296,7 +322,18 @@ func find_path(unit, target_position):
 		  " to " + str(end_tile.get_meta("zone", "unknown")) + " Row: " + str(end_tile.get_meta("row", -1)) + 
 		  " Col: " + str(end_tile.get_meta("col", -1)))
 	
-	# A* pathfinding
+	# Skip complex pathfinding for melee units - just go straight to target
+	if unit.character_data and unit.character_data.attack_range <= 1:
+		print("Melee unit - using direct path")
+		var direct_path = [start_tile, end_tile]
+		
+		# Visualize path if debugging
+		if debug_pathfinding:
+			debug_draw_path(direct_path, unit)
+			
+		return direct_path
+	
+	# A* pathfinding for ranged units
 	var open_set = [start_tile]
 	var came_from = {}
 	
@@ -324,6 +361,11 @@ func find_path(unit, target_position):
 		if current == end_tile:
 			var path = reconstruct_path(came_from, current)
 			print("Path found with " + str(path.size()) + " tiles")
+			
+			# Visualize path if debugging
+			if debug_pathfinding:
+				debug_draw_path(path, unit)
+				
 			return path
 		
 		open_set.erase(current)
@@ -354,7 +396,13 @@ func find_path(unit, target_position):
 	# No path found - try direct path to target
 	if start_tile and end_tile:
 		print("Returning direct path as fallback")
-		return [start_tile, end_tile]
+		var direct_path = [start_tile, end_tile]
+		
+		# Visualize fallback path if debugging
+		if debug_pathfinding:
+			debug_draw_path(direct_path, unit)
+			
+		return direct_path
 	
 	return []
 

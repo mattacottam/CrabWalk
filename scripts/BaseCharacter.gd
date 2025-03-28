@@ -819,7 +819,6 @@ func update_combat():
 			# If we have a target, either move to it or attack
 			if target_unit:
 				var distance = global_position.distance_to(target_unit.global_position)
-				print(character_data.display_name + " distance to target: " + str(distance))
 				
 				if character_data and distance <= character_data.attack_range * 2.0:
 					# In range, attack
@@ -840,12 +839,6 @@ func update_combat():
 			# Check if we're in range now
 			var distance = global_position.distance_to(target_unit.global_position)
 			
-			# Debug info
-			if current_path.size() > 0:
-				print(character_data.display_name + " following path, " + str(current_path.size()) + " steps remaining")
-			else:
-				print(character_data.display_name + " no current path!")
-				
 			if character_data and distance <= character_data.attack_range * 2.0:
 				# In range, attack
 				start_attack()
@@ -857,6 +850,9 @@ func update_combat():
 			else:
 				# Continue following path
 				continue_movement()
+				
+			# Only occasionally recalculate path (not every frame)
+			# Removed this as it was causing pathing issues
 		
 		"attacking":
 			# Attack is handled automatically once started
@@ -923,13 +919,9 @@ func continue_movement():
 	var distance = global_position.distance_to(next_pos)
 	var move_distance = move_speed * combat_system.tick_interval
 	
-	print(character_data.display_name + " moving to " + str(next_pos) + ", distance: " + str(distance))
-	
 	# Look at where we're going (just the horizontal direction)
-	var look_target = global_position + Vector3(direction.x, 0, direction.z)
-	
-	# Only do look_at if the direction has length
-	if not global_position.is_equal_approx(look_target):
+	if direction.length_squared() > 0.001:
+		var look_target = global_position + Vector3(direction.x, 0, direction.z)
 		look_at(look_target, Vector3.UP)
 	
 	if move_distance >= distance:
@@ -939,16 +931,10 @@ func continue_movement():
 		# Update tile occupancy
 		var previous_tile = board.get_tile_at_position(original_position)
 		if previous_tile and previous_tile != next_tile:
-			print("Leaving tile: " + str(previous_tile.get_meta("zone", "unknown")) + 
-				  " Row: " + str(previous_tile.get_meta("row", -1)) + 
-				  " Col: " + str(previous_tile.get_meta("col", -1)))
 			previous_tile.set_occupying_unit(null)
 		
 		original_position = global_position
 		next_tile.set_occupying_unit(self)
-		print("Now occupying tile: " + str(next_tile.get_meta("zone", "unknown")) + 
-			  " Row: " + str(next_tile.get_meta("row", -1)) + 
-			  " Col: " + str(next_tile.get_meta("col", -1)))
 		
 		# Remove this node from path
 		current_path.remove_at(0)
@@ -974,8 +960,13 @@ func start_attack():
 		current_action = "attacking"
 		play_animation("attack")
 		
-		# Look at target
-		look_at(target_unit.global_position, Vector3.UP)
+		# Look at target - make sure to face the correct direction
+		if is_instance_valid(target_unit):
+			# Calculate direction to target
+			var target_pos = target_unit.global_position
+			
+			# Make the unit face the target
+			look_at(target_pos, Vector3.UP)
 		
 		# Deal damage after animation delay
 		get_tree().create_timer(0.5).connect("timeout", Callable(self, "deal_attack_damage"))
