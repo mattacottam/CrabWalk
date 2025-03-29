@@ -12,7 +12,7 @@ var combat_active = false
 var player_units = []
 var enemy_units = []
 var combat_time = 0.0
-var tick_interval = 0.01  # Combat ticks every 0.1 seconds
+var tick_interval = 0.01  # Combat ticks every 0.01 seconds
 var tick_counter = 0
 var max_combat_time = 60.0  # Combat timeout
 
@@ -25,7 +25,7 @@ var debug_drawer = null  # Reference to a Node2D for drawing
 var debug_mesh_instances = []
 var debug_material = null
 var debug_update_timer = 0.0
-var debug_update_interval = 0.05  # Only update debug visuals every 0.5 seconds
+var debug_update_interval = 0.05  # Only update debug visuals every 0.05 seconds
 var unit_debug_meshes = {}
 
 func _ready():
@@ -187,36 +187,6 @@ func create_debug_sphere(position, radius):
 	
 	return mesh_instance
 
-func create_debug_drawer_script():
-	var script = GDScript.new()
-	script.source_code = """
-extends Control
-
-var parent = null
-
-func _draw():
-	if not parent or parent.debug_lines.size() == 0:
-		return
-	
-	for line in parent.debug_lines:
-		var camera = get_viewport().get_camera_3d()
-		if camera:
-			var from_pos = camera.unproject_position(line[0])
-			var to_pos = camera.unproject_position(line[1])
-			# Draw thicker, more visible red lines
-			draw_line(from_pos, to_pos, Color(1, 0, 0), 3.0)
-			# Add small circles at each point for better visibility
-			draw_circle(from_pos, 5.0, Color(1, 0.5, 0))
-			draw_circle(to_pos, 5.0, Color(1, 0.5, 0))
-	
-	# Force redraw after a short delay to ensure paths remain visible
-	if parent.debug_lines.size() > 0:
-		await get_tree().create_timer(0.1).timeout
-		queue_redraw()
-"""
-	script.reload()
-	return script
-
 func _on_battle_started():
 	start_combat()
 
@@ -233,10 +203,31 @@ func start_combat():
 	gather_units()
 	
 	# Initialize combat for all units
-	for unit in player_units + enemy_units:
+	for unit in player_units:
 		unit.start_combat(self)
+		
+		# Initialize components
+		initialize_unit_components(unit)
+		
+	for unit in enemy_units:
+		unit.start_combat(self)
+		
+		# Initialize components
+		initialize_unit_components(unit)
 	
 	print("Combat started with " + str(player_units.size()) + " player units vs " + str(enemy_units.size()) + " enemy units")
+
+# Initialize the components for a unit during combat
+func initialize_unit_components(unit):
+	# Get the combat component
+	var combat_component = unit.get_node_or_null("Components/CombatComponent")
+	if combat_component:
+		combat_component.start_combat(self)
+	
+	# Get the ability component
+	var ability_component = unit.get_node_or_null("Components/AbilityComponent")
+	if ability_component:
+		ability_component.start_combat(self)
 
 func gather_units():
 	if not board or not board.tiles:
@@ -265,6 +256,18 @@ func gather_units():
 func simulate_combat_tick():
 	# Execute one tick of combat simulation
 	emit_signal("combat_tick")
+	
+	# Update components for all units
+	for unit in player_units + enemy_units:
+		# Update combat component
+		var combat_component = unit.get_node_or_null("Components/CombatComponent")
+		if combat_component:
+			combat_component.update_combat()
+		
+		# Update ability component
+		var ability_component = unit.get_node_or_null("Components/AbilityComponent")
+		if ability_component:
+			ability_component.update_combat(tick_interval)
 	
 	# Check win conditions
 	check_win_condition()
@@ -295,9 +298,27 @@ func end_combat(winner):
 	# Reset all units
 	for unit in player_units:
 		unit.end_combat()
+		
+		# End combat for components
+		var combat_component = unit.get_node_or_null("Components/CombatComponent")
+		if combat_component:
+			combat_component.end_combat()
+			
+		var ability_component = unit.get_node_or_null("Components/AbilityComponent")
+		if ability_component:
+			ability_component.end_combat()
 	
 	for unit in enemy_units:
 		unit.end_combat()
+		
+		# End combat for components
+		var combat_component = unit.get_node_or_null("Components/CombatComponent")
+		if combat_component:
+			combat_component.end_combat()
+			
+		var ability_component = unit.get_node_or_null("Components/AbilityComponent")
+		if ability_component:
+			ability_component.end_combat()
 	
 	print("Combat ended, winner: " + winner)
 	
@@ -466,9 +487,10 @@ func set_debug_pathfinding(enabled):
 		
 		# Force redraw all current paths
 		for unit in player_units + enemy_units:
-			if unit.target_unit and unit.current_action == "moving":
+			var combat_component = unit.get_node_or_null("Components/CombatComponent")
+			if combat_component and combat_component.target_unit and combat_component.current_action == "moving":
 				# Re-find path to visualize
-				var path = find_path(unit, unit.target_unit.global_position)
+				var path = find_path(unit, combat_component.target_unit.global_position)
 				if path.size() > 0:
 					debug_draw_path(path)
 	else:
@@ -520,7 +542,7 @@ func debug_draw_unit_path(positions, unit=null):
 	return mesh_instances
 
 func get_closest_enemy(unit):
-	var enemy_list = enemy_units if unit.character_data and not unit.character_data.is_enemy else player_units
+	var enemy_list = enemy_units if not unit.character_data.is_enemy else player_units
 	
 	if enemy_list.size() == 0:
 		return null
@@ -537,7 +559,7 @@ func get_closest_enemy(unit):
 	return closest
 
 func get_enemies_in_range(unit, range_value):
-	var enemy_list = enemy_units if unit.character_data and not unit.character_data.is_enemy else player_units
+	var enemy_list = enemy_units if not unit.character_data.is_enemy else player_units
 	var in_range = []
 	
 	for enemy in enemy_list:
@@ -554,8 +576,9 @@ func manual_tick():
 	# Only refresh visualization once every few ticks
 	if debug_pathfinding and randf() < 0.3:  # 30% chance to update visuals
 		for unit in player_units + enemy_units:
-			if unit.target_unit and unit.current_action == "moving":
-				var path = find_path(unit, unit.target_unit.global_position)
+			var combat_component = unit.get_node_or_null("Components/CombatComponent")
+			if combat_component and combat_component.target_unit and combat_component.current_action == "moving":
+				var path = find_path(unit, combat_component.target_unit.global_position)
 				if path.size() > 0:
 					debug_draw_path(path)
 					break  # Only visualize one path at a time

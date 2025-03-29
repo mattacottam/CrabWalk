@@ -1,0 +1,35 @@
+[gd_scene load_steps=4 format=3 uid="uid://b4a2g3dkqcnpe"]
+
+[ext_resource type="Script" path="res://scripts/EnemyUnit.gd" id="1_eyl4n"]
+[ext_resource type="PackedScene" path="res://assets/models/X Bot.fbx" id="2_dj4q1"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_w0fgo"]
+radius = 0.5
+height = 2.0
+
+[node name="EnemyUnit" type="CharacterBody3D"]
+script = ExtResource("1_eyl4n")
+
+[node name="Armature" parent="." instance=ExtResource("2_dj4q1")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CapsuleShape3D_w0fgo")
+
+[node name="UIBillboard" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+
+[node name="Nameplate" type="Label3D" parent="UIBillboard"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+billboard = 1
+text = "Enemy"
+font_size = 16
+outline_size = 4
+
+[node name="Components" type="Node" parent="."]
+
+[node name="CombatComponent" type="Node" parent="Components"]
+script_instantiation_script = "res://scripts/CombatComponent.gd"
+
+[node name="AbilityComponent" type="Node" parent="Components"]
+script_instantiation_script = "res://scripts/AbilityComponent.gd"

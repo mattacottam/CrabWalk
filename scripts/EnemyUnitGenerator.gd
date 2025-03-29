@@ -5,7 +5,7 @@ extends Node
 @onready var character_database = get_node("/root/GameBoard/CharacterDatabase")
 
 # Character scene to spawn
-var character_scene = preload("res://scenes/characters/BaseCharacter.tscn")
+var enemy_unit_scene = preload("res://scenes/characters/EnemyUnit.tscn")
 
 # Enemy generation settings
 var min_enemies = 1
@@ -252,7 +252,7 @@ func place_enemies_strategically(enemy_team):
 		# Find best available tile
 		var placed = false
 		for row in preferred_rows:
-			if tiles_by_row[row].size() > 0:
+			if row < board.ENEMY_ROWS and tiles_by_row[row].size() > 0:
 				# Choose a tile - tanks prefer center column, others random
 				var chosen_tile
 				
@@ -291,7 +291,7 @@ func place_enemies_strategically(enemy_team):
 
 func spawn_enemy_at_tile(enemy_data, tile):
 	# Spawn enemy unit
-	var enemy_unit = character_scene.instantiate()
+	var enemy_unit = enemy_unit_scene.instantiate()
 	board.add_child(enemy_unit)
 	
 	# Set character data 
@@ -306,7 +306,40 @@ func spawn_enemy_at_tile(enemy_data, tile):
 	# Set the occupying unit reference
 	tile.set_occupying_unit(enemy_unit)
 	
+	# Initialize the components
+	initialize_enemy_components(enemy_unit)
+	
 	print("Placed " + enemy_data.display_name + " (Type: " + str(enemy_data.get_meta("unit_type")) + ", Star: " + str(enemy_data.star_level) + ")")
+	
+	return enemy_unit
+
+# Initialize the components for an enemy unit
+func initialize_enemy_components(unit):
+	# Add and initialize the combat component
+	var combat_component_node = unit.get_node_or_null("Components/CombatComponent")
+	
+	if combat_component_node:
+		var combat_component = CombatComponent.new(unit)
+		combat_component_node.replace_by(combat_component)
+	else:
+		var components = unit.get_node_or_null("Components")
+		if components:
+			var combat_component = CombatComponent.new(unit)
+			combat_component.name = "CombatComponent"
+			components.add_child(combat_component)
+	
+	# Add and initialize the ability component
+	var ability_component_node = unit.get_node_or_null("Components/AbilityComponent")
+	
+	if ability_component_node:
+		var ability_component = AbilityComponent.new(unit)
+		ability_component_node.replace_by(ability_component)
+	else:
+		var components = unit.get_node_or_null("Components")
+		if components:
+			var ability_component = AbilityComponent.new(unit)
+			ability_component.name = "AbilityComponent"
+			components.add_child(ability_component)
 
 func clear_all_enemies():
 	if not board:

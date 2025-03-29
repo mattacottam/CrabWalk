@@ -4,8 +4,9 @@ extends Node
 @onready var board = get_node("/root/GameBoard")
 @onready var character_database = get_node("/root/GameBoard/CharacterDatabase")
 
-# Character scene to spawn
-var character_scene = preload("res://scenes/characters/BaseCharacter.tscn")
+# Character scenes to spawn
+var player_unit_scene = preload("res://scenes/characters/PlayerUnit.tscn")
+var enemy_unit_scene = preload("res://scenes/characters/EnemyUnit.tscn")
 
 # UI elements
 var spawn_button
@@ -138,7 +139,7 @@ func spawn_selected_unit():
 	# Find the first unoccupied bench tile
 	spawn_unit_on_bench(character_data)
 
-func spawn_unit_on_bench(character_data):
+func spawn_unit_on_bench(character_data, is_enemy = false):
 	if not board:
 		print("ERROR: Board not found")
 		return
@@ -149,37 +150,78 @@ func spawn_unit_on_bench(character_data):
 		
 		if tile and not tile.is_occupied():
 			# Spawn character on this tile
-			var character = character_scene.instantiate()
-			board.add_child(character)
+			var unit
+			
+			# Choose the correct scene based on unit type
+			if is_enemy:
+				unit = enemy_unit_scene.instantiate()
+			else:
+				unit = player_unit_scene.instantiate()
+				
+			board.add_child(unit)
 			
 			# Ensure star level is set (default to 1 if not present)
 			if character_data.star_level <= 0:
 				character_data.star_level = 1
 				
 			# Set character data
-			character.set_character_data(character_data)
+			unit.set_character_data(character_data)
 			
 			# Position at the tile's center
-			character.global_position = tile.get_center_position()
+			unit.global_position = tile.get_center_position()
 			
 			# Set the occupying unit reference
-			tile.set_occupying_unit(character)
+			tile.set_occupying_unit(unit)
+			
+			# Initialize components
+			initialize_unit_components(unit)
 			
 			print("Spawned " + character_data.display_name + " (Star " + str(character_data.star_level) + ") on bench slot %d" % i)
 			
-			# Add a delay before checking for combines, without capturing the character reference
-			character.combine_cooldown = true
-			var timer = get_tree().create_timer(0.2)
-			await timer.timeout
+			# For player units, check for combines after a delay
+			if not is_enemy:
+				# Add a delay before checking for combines, without capturing the unit reference
+				unit.combine_cooldown = true
+				var timer = get_tree().create_timer(0.2)
+				await timer.timeout
+				
+				# Only proceed if the unit still exists
+				if is_instance_valid(unit):
+					unit.combine_cooldown = false
+					unit.check_for_automatic_combine()
 			
-			# Only proceed if the character still exists
-			if is_instance_valid(character):
-				character.combine_cooldown = false
-				character.check_for_automatic_combine()
-			
-			return
+			return unit
 	
 	print("No empty bench slots available")
+	return null
+
+# Initialize the components for a unit
+func initialize_unit_components(unit):
+	# Add and initialize the combat component
+	var combat_component_node = unit.get_node_or_null("Components/CombatComponent")
+	
+	if combat_component_node:
+		var combat_component = CombatComponent.new(unit)
+		combat_component_node.replace_by(combat_component)
+	else:
+		var components = unit.get_node_or_null("Components")
+		if components:
+			var combat_component = CombatComponent.new(unit)
+			combat_component.name = "CombatComponent"
+			components.add_child(combat_component)
+	
+	# Add and initialize the ability component
+	var ability_component_node = unit.get_node_or_null("Components/AbilityComponent")
+	
+	if ability_component_node:
+		var ability_component = AbilityComponent.new(unit)
+		ability_component_node.replace_by(ability_component)
+	else:
+		var components = unit.get_node_or_null("Components")
+		if components:
+			var ability_component = AbilityComponent.new(unit)
+			ability_component.name = "AbilityComponent"
+			components.add_child(ability_component)
 
 # Spawn a set of test units with varying health and mana values
 func spawn_test_units_set():
