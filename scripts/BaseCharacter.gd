@@ -48,6 +48,21 @@ const MAX_SNAP_DISTANCE = 5.0  # Adjust as needed
 var board = null
 var sell_zone = null
 
+# Collision shape for better click detection
+var collision_shape
+
+# Combat state
+var combat_system = null
+var in_combat = false
+var target_unit = null
+var current_path = []
+var move_speed = 5.0
+var current_action = "idle"  # idle, moving, attacking, casting, hurt, dying
+var attack_cooldown = 0.0
+var attack_cooldown_max = 1.0  # Base cooldown, will be adjusted by attack_speed
+var path_update_timer = 0.0
+var path_update_interval = 0.1  # Update path every 0.5 seconds
+
 # Animation references
 @onready var animation_player = $Armature/AnimationPlayer if has_node("Armature/AnimationPlayer") else null
 const IDLE_ANIM = "unarmed idle 01/mixamo_com"
@@ -58,19 +73,6 @@ const ATTACK_ANIM = "standing melee punch/mixamo_com"
 const TAKE_DAMAGE_ANIM = "standing react small from front/mixamo_com"
 const DYING_ANIM = "standing death backward 01/mixamo_com"
 const VICTORY_ANIM = "standing idle 03 examine/mixamo_com"
-
-# Collision shape for better click detection
-var collision_shape
-
-# Combat state
-var combat_system = null
-var in_combat = false
-var target_unit = null
-var current_path = []
-var move_speed = 2.0
-var current_action = "idle"  # idle, moving, attacking, casting, hurt, dying
-var attack_cooldown = 0.0
-var attack_cooldown_max = 1.0  # Base cooldown, will be adjusted by attack_speed
 
 func _ready():
 	#test_health_damage()
@@ -810,6 +812,10 @@ func update_combat():
 	if attack_cooldown > 0:
 		attack_cooldown -= combat_system.tick_interval
 	
+	# Reduce path update timer
+	if path_update_timer > 0:
+		path_update_timer -= combat_system.tick_interval
+	
 	# Main combat state machine
 	match current_action:
 		"idle":
@@ -834,6 +840,7 @@ func update_combat():
 				current_action = "idle"
 				play_animation("idle")
 				target_unit = null
+				combat_system.clear_unit_debug_meshes(self)  # Clear debug path
 				return
 			
 			# Check if we're in range now
@@ -843,16 +850,14 @@ func update_combat():
 				# In range, attack
 				start_attack()
 				print(character_data.display_name + " in range, attacking")
-			elif current_path.size() == 0:
-				# Need to find a new path
-				print(character_data.display_name + " finding new path")
+				combat_system.clear_unit_debug_meshes(self)  # Clear debug path
+			elif current_path.size() == 0 or path_update_timer <= 0:
+				# Need to find a new path (either ran out of path or time to update)
+				print(character_data.display_name + " updating path")
 				move_to_target()
 			else:
 				# Continue following path
 				continue_movement()
-				
-			# Only occasionally recalculate path (not every frame)
-			# Removed this as it was causing pathing issues
 		
 		"attacking":
 			# Attack is handled automatically once started
@@ -871,13 +876,29 @@ func find_target():
 	if target_unit:
 		print(character_data.display_name + " targets " + target_unit.character_data.display_name)
 
+func face_target(target_position):
+	# Calculate direction vector in the horizontal plane
+	var direction = target_position - global_position
+	direction.y = 0  # Keep only horizontal component
+	
+	if direction.length_squared() > 0.001:
+		# Models are likely facing the wrong way - rotate 180 degrees
+		var target_pos = global_position + direction
+		look_at(target_pos, Vector3.UP)
+		
+		# Add 180 degree rotation to face correctly
+		rotate_y(PI)
+
 func move_to_target():
 	if not target_unit or not combat_system:
 		current_action = "idle"
 		return
 	
+	# Always use the target's CURRENT position
+	var target_position = target_unit.global_position
+	
 	# Calculate path to target
-	current_path = combat_system.find_path(self, target_unit.global_position)
+	current_path = combat_system.find_path(self, target_position)
 	
 	if current_path.size() <= 1:
 		# No valid path or already at destination
@@ -891,15 +912,14 @@ func move_to_target():
 		if current_path[0] == current_tile:
 			current_path.remove_at(0)
 	
+	# Reset path update timer
+	path_update_timer = path_update_interval
+	
 	print(character_data.display_name + " path found with " + str(current_path.size()) + " steps")
 	
 	# Start moving
 	current_action = "moving"
 	play_animation("move")
-	
-	# Visualize path if debugging
-	if combat_system.debug_pathfinding:
-		combat_system.debug_draw_path(current_path)
 
 func continue_movement():
 	if current_path.size() == 0:
@@ -919,10 +939,13 @@ func continue_movement():
 	var distance = global_position.distance_to(next_pos)
 	var move_distance = move_speed * combat_system.tick_interval
 	
-	# Look at where we're going (just the horizontal direction)
-	if direction.length_squared() > 0.001:
-		var look_target = global_position + Vector3(direction.x, 0, direction.z)
-		look_at(look_target, Vector3.UP)
+	# Always look at the target if it's valid
+	if is_instance_valid(target_unit):
+		face_target(target_unit.global_position)
+	else:
+		# If no target, look at where we're going
+		if direction.length_squared() > 0.001:
+			face_target(global_position + direction)
 	
 	if move_distance >= distance:
 		# Reached next node, move to it exactly
@@ -943,6 +966,7 @@ func continue_movement():
 			# Reached destination
 			current_action = "idle"
 			play_animation("idle")
+			combat_system.clear_unit_debug_meshes(self)  # Clear debug path
 	else:
 		# Move along path
 		global_position += direction * move_distance
@@ -962,11 +986,7 @@ func start_attack():
 		
 		# Look at target - make sure to face the correct direction
 		if is_instance_valid(target_unit):
-			# Calculate direction to target
-			var target_pos = target_unit.global_position
-			
-			# Make the unit face the target
-			look_at(target_pos, Vector3.UP)
+			face_target(target_unit.global_position)
 		
 		# Deal damage after animation delay
 		get_tree().create_timer(0.5).connect("timeout", Callable(self, "deal_attack_damage"))

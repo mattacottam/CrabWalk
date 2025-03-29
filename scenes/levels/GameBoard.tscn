@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://cg5dl7gwb4ai4" path="res://scripts/GameBoard.gd" id="1_31iy7"]
 [ext_resource type="Script" uid="uid://y0i1bu2qc4wo" path="res://scripts/CharacterDatabase.gd" id="1_77p1f"]
 [ext_resource type="Script" uid="uid://c05jqm0sggv5r" path="res://scripts/UnitSpawner.gd" id="2_ac6wt"]
-[ext_resource type="Shader" path="res://assets/shaders/water.gdshader" id="3_ac6wt"]
+[ext_resource type="Shader" uid="uid://brk8s24km212r" path="res://assets/shaders/water.gdshader" id="3_ac6wt"]
 [ext_resource type="PackedScene" uid="uid://crm6y18r5xin6" path="res://scenes/ui/PlayerUI.tscn" id="4_77p1f"]
 [ext_resource type="PackedScene" uid="uid://bdaw3p0vjnv8v" path="res://scenes/ui/ShopUI.tscn" id="5_qfvow"]
 [ext_resource type="Script" uid="uid://cmvblyrj6dyho" path="res://scripts/Player.gd" id="6_qfvow"]

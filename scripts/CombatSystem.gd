@@ -35,6 +35,10 @@ func _ready():
 	# Enable debug pathfinding by default
 	debug_pathfinding = true
 	create_debug_drawer()
+	
+	# Initialize unit debug meshes dictionary if it doesn't exist
+	if not "unit_debug_meshes" in self:
+		unit_debug_meshes = {}
 
 func _process(delta):
 	if combat_active:
@@ -325,13 +329,14 @@ func find_path(unit, target_position):
 	# Skip complex pathfinding for melee units - just go straight to target
 	if unit.character_data and unit.character_data.attack_range <= 1:
 		print("Melee unit - using direct path")
-		var direct_path = [start_tile, end_tile]
+		# Create a direct path from unit position to target position
+		var direct_path = [unit.global_position, target_position]
 		
 		# Visualize path if debugging
 		if debug_pathfinding:
-			debug_draw_path(direct_path, unit)
+			debug_draw_unit_path(direct_path, unit)
 			
-		return direct_path
+		return [start_tile, end_tile]  # Return the tiles, but visualize actual positions
 	
 	# A* pathfinding for ranged units
 	var open_set = [start_tile]
@@ -362,9 +367,15 @@ func find_path(unit, target_position):
 			var path = reconstruct_path(came_from, current)
 			print("Path found with " + str(path.size()) + " tiles")
 			
-			# Visualize path if debugging
+			# Visualize actual positions path if debugging
 			if debug_pathfinding:
-				debug_draw_path(path, unit)
+				var position_path = []
+				for tile in path:
+					position_path.append(tile.global_position)
+				# Add the final target position for accuracy
+				if path.size() > 0:
+					position_path[position_path.size()-1] = target_position
+				debug_draw_unit_path(position_path, unit)
 				
 			return path
 		
@@ -400,7 +411,8 @@ func find_path(unit, target_position):
 		
 		# Visualize fallback path if debugging
 		if debug_pathfinding:
-			debug_draw_path(direct_path, unit)
+			var position_path = [unit.global_position, target_position]
+			debug_draw_unit_path(position_path, unit)
 			
 		return direct_path
 	
@@ -462,6 +474,50 @@ func set_debug_pathfinding(enabled):
 	else:
 		# Clear debug meshes
 		clear_debug_meshes()
+
+func debug_draw_unit_path(positions, unit=null):
+	# Visualize the path using actual positions, not tile centers
+	var mesh_instances = []
+	
+	# We need at least 2 points to draw a line
+	if positions.size() < 2:
+		return mesh_instances
+	
+	# Show all segments
+	for i in range(positions.size() - 1):
+		var from_pos = positions[i]
+		var to_pos = positions[i+1]
+		
+		# Lift lines slightly above the board
+		from_pos.y = 0.15
+		to_pos.y = 0.15
+		
+		# Create line mesh
+		var line = create_debug_line(from_pos, to_pos)
+		mesh_instances.append(line)
+		
+		# Create spheres at all points
+		var start_sphere = create_debug_sphere(from_pos, 0.1) 
+		mesh_instances.append(start_sphere)
+		
+		if i == positions.size() - 2:  # Last point
+			var end_sphere = create_debug_sphere(to_pos, 0.1)
+			mesh_instances.append(end_sphere)
+	
+	# Store the meshes with their associated unit if provided
+	if unit:
+		if unit in unit_debug_meshes:
+			# Clear old meshes for this unit
+			for mesh in unit_debug_meshes[unit]:
+				if is_instance_valid(mesh):
+					mesh.queue_free()
+		
+		unit_debug_meshes[unit] = mesh_instances
+	else:
+		# For general debug meshes not tied to a specific unit
+		debug_mesh_instances.append_array(mesh_instances)
+	
+	return mesh_instances
 
 func get_closest_enemy(unit):
 	var enemy_list = enemy_units if unit.character_data and not unit.character_data.is_enemy else player_units
