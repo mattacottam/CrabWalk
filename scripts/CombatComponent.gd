@@ -275,7 +275,7 @@ func deal_attack_damage():
 	unit.play_animation("idle")
 
 # Take damage during combat
-func take_combat_damage(amount, attacker):
+func take_combat_damage(amount, _attacker):
 	# Take damage
 	unit.current_health = max(0, unit.current_health - amount)
 	

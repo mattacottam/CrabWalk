@@ -9,6 +9,7 @@ var path_update_interval = 0.1  # Update path every 0.1 seconds
 # Enemy-specific behavior
 var aggression_level = 1.0  # 0.0 to 1.0, higher values make enemy more aggressive
 var preferred_target_type = null  # Can specify certain unit types to prioritize
+var attack_cooldown_max: float = 1.0
 
 func _ready():
 	super._ready()

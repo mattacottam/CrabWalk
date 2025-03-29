@@ -21,6 +21,17 @@ var board = null
 var character_mesh = null
 var character_material = null
 
+const STAR_COLORS = {
+	1: Color(0.8, 0.8, 0.2),  # Gold
+	2: Color(0.6, 0.8, 1.0),  # Light blue
+	3: Color(1.0, 0.3, 0.7)   # Pink/purple
+}
+const STAR_SCALES = {
+	1: Vector3(1.0, 1.0, 1.0),
+	2: Vector3(1.15, 1.15, 1.15),
+	3: Vector3(1.3, 1.3, 1.3)
+}
+
 # UI elements
 var nameplate = null
 
@@ -37,48 +48,33 @@ var current_path = []  # Added declaration to fix error
 
 # Animation references
 @onready var animation_player = $Armature/AnimationPlayer if has_node("Armature/AnimationPlayer") else null
-const IDLE_ANIM = "unarmed idle 01/mixamo.com"
-const DRAG_ANIM = "falling idle/mixamo.com"
-const IDLE_COMBAT_ANIM = "standing idle/mixamo.com"
-const MOVE_ANIM = "running/mixamo.com"
-const ATTACK_ANIM = "standing melee attack horizontal/mixamo.com" 
-const TAKE_DAMAGE_ANIM = "standing react small from front/mixamo.com"
-const DYING_ANIM = "standing death backward/mixamo.com"
-const VICTORY_ANIM = "standing idle 03/mixamo.com"
+const IDLE_ANIM = "unarmed idle 01/mixamo_com"
+const DRAG_ANIM = "fall a loop/mixamo_com"
+const IDLE_COMBAT_ANIM = "standing idle 01/mixamo_com"
+const MOVE_ANIM = "standing run forward/mixamo_com"
+const ATTACK_ANIM = "standing melee punch/mixamo_com" 
+const TAKE_DAMAGE_ANIM = "standing react small from front/mixamo_com"
+const DYING_ANIM = "standing death forward 01/mixamo_com"
+const VICTORY_ANIM = "standing idle 03 examine/mixamo_com"
 
 func _ready():
-	# Find the board in the scene
-	board = get_node_or_null("/root/GameBoard")
+	# Check if the health bar system exists
+	health_bar_system = get_node_or_null("UIBillboard/HealthBarSystem")
 	
-	# Create a collision shape if none exists
-	ensure_collision()
-	
-	# If we already have character data, apply it
-	if character_data:
-		apply_character_visuals()
-	
-	# Find or create health bar system
-	health_bar_system = $UIBillboard/HealthBarSystem
+	# If it doesn't exist, create it
 	if not health_bar_system:
-		health_bar_system = HealthBarSystem.new(
-			max_health if character_data else 100,
-			max_mana if character_data else 100
-		)
+		health_bar_system = HealthBarSystem.new(max_health, max_mana)
 		health_bar_system.name = "HealthBarSystem"
+		
+		# Make sure UIBillboard exists
+		var ui_billboard = get_node_or_null("UIBillboard")
+		if not ui_billboard:
+			ui_billboard = Node3D.new()
+			ui_billboard.name = "UIBillboard"
+			add_child(ui_billboard)
+			
+		# Add the health bar system to UIBillboard
 		$UIBillboard.add_child(health_bar_system)
-	
-	# Initialize stats and update UI
-	initialize_stats()
-	update_ui()
-	
-	# Set initial health and mana for display
-	if health_bar_system:
-		health_bar_system.update_health_display(current_health)
-		health_bar_system.update_mana_display(current_mana)
-	
-	# Initialize star level from character data
-	if character_data:
-		set_star_level(character_data.star_level)
 
 # Initialize character stats from character_data
 func initialize_stats():

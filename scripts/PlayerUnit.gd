@@ -1,20 +1,6 @@
 extends Unit
 class_name PlayerUnit
 
-# Star visuals
-var combine_cooldown = false
-var star_decorations = []
-const STAR_COLORS = {
-	1: Color(0.8, 0.8, 0.2),  # Gold
-	2: Color(0.6, 0.8, 1.0),  # Light blue
-	3: Color(1.0, 0.3, 0.7)   # Pink/purple
-}
-const STAR_SCALES = {
-	1: Vector3(1.0, 1.0, 1.0),
-	2: Vector3(1.15, 1.15, 1.15),
-	3: Vector3(1.3, 1.3, 1.3)
-}
-
 # Drag and drop properties
 var is_dragging = false
 var drag_height = 0.5  # Increased height for floating effect
@@ -26,14 +12,21 @@ var original_y = 0  # Store original height
 # Maximum distance for hex tile snapping
 const MAX_SNAP_DISTANCE = 5.0  # Adjust as needed
 
-# Reference to sell zone
+# Reference to the sell zone
 var sell_zone = null
 
+# Status flags
+var combine_cooldown = false
+
 func _ready():
+	# Call parent _ready first
 	super._ready()
 	
 	# Find the sell zone
 	sell_zone = get_node_or_null("/root/GameBoard/SellZone")
+	
+	# Create a plane for drag calculations
+	drag_plane = Plane(Vector3.UP, 0)
 	
 	if board:
 		# Store our starting tile
@@ -41,72 +34,13 @@ func _ready():
 		if original_tile:
 			original_tile.set_occupying_unit(self)
 	
-	# Create a plane for drag calculations
-	drag_plane = Plane(Vector3.UP, 0)
-	
 	# Start idle animation
 	if animation_player:
 		animation_player.play(IDLE_ANIM)
-	
-	# Update star decorations
-	update_star_decorations()
-	
-	# Trigger automatic combine check (delayed to ensure everything is set up)
-	call_deferred("check_for_automatic_combine")
-
-# Override set_star_level to include visual updates
-func set_star_level(level: int):
-	super.set_star_level(level)
-	
-	# Update scale based on star level
-	scale = STAR_SCALES[star_level]
-	
-	# Create star decorations
-	update_star_decorations()
-
-# Create visual star decorations
-func update_star_decorations():
-	# Remove any existing star decorations
-	for star in star_decorations:
-		if is_instance_valid(star):
-			star.queue_free()
-	star_decorations.clear()
-	
-	# Create stars based on star level
-	var star_color = STAR_COLORS[star_level]
-	
-	for i in range(star_level):
-		var star = create_star_mesh(star_color)
-		add_child(star)
-		
-		# Position stars horizontally above the unit
-		var offset = (i - (star_level-1)/2.0) * 0.3  # Center the stars
-		star.position = Vector3(offset, 2.2, 0)
-		star_decorations.append(star)
-
-# Create a star mesh
-func create_star_mesh(color: Color) -> MeshInstance3D:
-	var star = MeshInstance3D.new()
-	
-	# Use a simple shape for the star (can be improved later)
-	var sphere = SphereMesh.new()
-	sphere.radius = 0.1
-	sphere.height = 0.2
-	star.mesh = sphere
-	
-	# Create glowing material
-	var material = StandardMaterial3D.new()
-	material.albedo_color = color
-	material.emission_enabled = true
-	material.emission = color
-	material.emission_energy_multiplier = 2.0
-	star.material_override = material
-	
-	return star
 
 func _unhandled_input(event):
-	# Only process input if not being handled by UI and not in combat
-	if in_combat:
+	# Skip if in combat or board is null
+	if in_combat or not board:
 		return
 		
 	if event is InputEventMouseButton:
@@ -144,12 +78,19 @@ func get_mouse_collision():
 	return space_state.intersect_ray(query)
 
 func start_drag(mouse_pos):
+	# Prevent dragging if this is an enemy unit
+	if character_data and character_data.is_enemy:
+		print("Cannot drag enemy units")
+		return
+		
 	is_dragging = true
 	
 	# Save our starting position and tile
 	original_position = global_position
 	original_y = global_position.y
-	original_tile = board.get_tile_at_position(global_position)
+	
+	if board:
+		original_tile = board.get_tile_at_position(global_position)
 	
 	# Calculate drag offset to maintain relative position
 	var camera = get_viewport().get_camera_3d()
@@ -171,6 +112,9 @@ func start_drag(mouse_pos):
 		animation_player.play(DRAG_ANIM, 0.3)  # 0.3 seconds crossfade time
 
 func update_drag_position(mouse_pos):
+	if not board:
+		return
+		
 	var camera = get_viewport().get_camera_3d()
 	var ray_origin = camera.project_ray_origin(mouse_pos)
 	var ray_dir = camera.project_ray_normal(mouse_pos)
@@ -202,6 +146,9 @@ func update_drag_position(mouse_pos):
 
 func end_drag():
 	is_dragging = false
+	
+	if not board:
+		return
 	
 	# Check if the unit is over the sell zone
 	if is_over_sell_zone():
@@ -249,6 +196,9 @@ func is_over_sell_zone():
 	return distance < 2.0
 
 func sell_unit():
+	if not board:
+		return
+		
 	# Tell the original tile we're no longer there
 	if original_tile:
 		original_tile.set_occupying_unit(null)
@@ -287,6 +237,8 @@ func sell_unit():
 		
 		# Ensure value is at least 1
 		sell_value = max(sell_value, 1)
+		
+		print("Selling " + str(star_level) + "-star unit for " + str(sell_value) + " gold")
 		
 		# Add gold
 		player.add_gold(sell_value)
@@ -341,16 +293,38 @@ func snap_to_tile(tile):
 		
 		tile.set_occupying_unit(self)
 
-# Check if this unit can combine with another
-func can_combine_with(other_unit) -> bool:
-	if not character_data or not other_unit or not other_unit.character_data:
-		return false
+# Check for automatic combining opportunities
+func check_for_automatic_combine():
+	if not board:
+		return
 		
-	# Must be same character, same star level, and both must be the same type (player or enemy)
-	return (character_data.id == other_unit.character_data.id and 
-	   star_level == other_unit.star_level and 
-	   star_level < 3 and
-	   character_data.is_enemy == other_unit.character_data.is_enemy)
+	# Don't combine if already on cooldown
+	if combine_cooldown:
+		return
+		
+	# Don't combine enemy units automatically
+	if character_data and character_data.is_enemy:
+		return
+		
+	# Make sure we can combine (star level < 3)
+	if star_level >= 3 or not character_data:
+		return
+	
+	# Find all matching units
+	var matching_units = find_matching_units()
+	
+	# If we have EXACTLY 3 matching units, combine them
+	if matching_units.size() == 3:
+		# Set cooldown to prevent recursion
+		combine_cooldown = true
+		
+		# Perform the combination
+		combine_units(matching_units)
+		
+		# Reset cooldown after a delay
+		var timer = get_tree().create_timer(1.0)
+		await timer.timeout
+		combine_cooldown = false
 
 # Find all matching units on the board of the same type and star level
 func find_matching_units():
@@ -373,39 +347,16 @@ func find_matching_units():
 			if (unit.character_data and 
 			   unit.character_data.id == character_data.id and 
 			   unit.star_level == star_level and
-			   unit.character_data.is_enemy == character_data.is_enemy):
+			   (unit.character_data.is_enemy == character_data.is_enemy)):
 				matching_units.append(unit)
 	
 	return matching_units
 
-# Check for automatic combining opportunities
-func check_for_automatic_combine():
-	# Don't combine if already on cooldown
-	if combine_cooldown:
-		return
-	
-	# Make sure we can combine (star level < 3)
-	if star_level >= 3 or not character_data:
-		return
-	
-	# Find all matching units
-	var matching_units = find_matching_units()
-	
-	# If we have EXACTLY 3 matching units, combine them
-	if matching_units.size() == 3:
-		# Set cooldown to prevent recursion
-		combine_cooldown = true
-		
-		# Perform the combination
-		combine_units(matching_units)
-		
-		# Reset cooldown after a delay
-		var timer = get_tree().create_timer(1.0)
-		await timer.timeout
-		combine_cooldown = false
-
 # Combine three units into one higher star level unit
 func combine_units(units_to_combine):
+	if not board:
+		return
+		
 	# Choose the first unit's tile as the target
 	var target_tile = board.get_tile_at_position(units_to_combine[0].global_position)
 	
@@ -482,24 +433,12 @@ func create_combine_effect(pos: Vector3):
 	particles.draw_pass_1 = mesh
 	
 	# Add to scene and start
-	board.add_child(particles)
+	if board:
+		board.add_child(particles)
+	else:
+		add_child(particles)
 	
 	# Remove after effect completes
 	var timer = get_tree().create_timer(particles.lifetime * 1.5)
 	await timer.timeout
 	particles.queue_free()
-
-# Override the die method for player unit death
-func die():
-	print(character_data.display_name + " has died!")
-	
-	# Maybe add a slight delay before removing
-	var timer = get_tree().create_timer(0.5)
-	await timer.timeout
-	
-	# Tell the tile we're no longer there
-	if original_tile:
-		original_tile.set_occupying_unit(null)
-	
-	# Remove the character
-	queue_free()
