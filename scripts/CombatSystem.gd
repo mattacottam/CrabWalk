@@ -4,7 +4,7 @@ signal combat_tick
 signal combat_ended(winner)
 
 # References
-@onready var board = get_node("/root/GameBoard")
+@onready var board = get_node_or_null("/root/GameBoard")
 @onready var battle_manager = get_node_or_null("/root/GameBoard/BattleManager")
 
 # Combat state
@@ -29,6 +29,15 @@ var debug_update_interval = 0.05  # Only update debug visuals every 0.05 seconds
 var unit_debug_meshes = {}
 
 func _ready():
+	# Ensure board reference is properly set
+	if not board:
+		board = get_node_or_null("/root/GameBoard")
+	
+	if not board:
+		push_error("ERROR: CombatSystem could not find GameBoard!")
+	else:
+		print("CombatSystem: Successfully found GameBoard reference")
+	
 	if battle_manager:
 		battle_manager.battle_started.connect(_on_battle_started)
 	
@@ -202,38 +211,104 @@ func start_combat():
 	# Find all units
 	gather_units()
 	
+	# Troubleshooting - print units
+	print("Combat started with player units:")
+	for unit in player_units:
+		print("  - " + unit.name + " (" + unit.character_data.display_name + ")")
+	
+	print("Combat started with enemy units:")
+	for unit in enemy_units:
+		print("  - " + unit.name + " (" + unit.character_data.display_name + ")")
+	
 	# Initialize combat for all units
 	for unit in player_units:
-		unit.start_combat(self)
-		
-		# Initialize components
-		initialize_unit_components(unit)
-		
-	for unit in enemy_units:
-		unit.start_combat(self)
-		
-		# Initialize components
+		# For component-based units, initialize their components
 		initialize_unit_components(unit)
 	
-	print("Combat started with " + str(player_units.size()) + " player units vs " + str(enemy_units.size()) + " enemy units")
+	for unit in enemy_units:
+		# For component-based units, initialize their components
+		initialize_unit_components(unit)
+	
+	print("Combat system initialized all units for combat")
 
-# Initialize the components for a unit during combat
 func initialize_unit_components(unit):
+	if not is_instance_valid(unit):
+		print("Warning: Trying to initialize invalid unit")
+		return
+		
+	# Force creation of components if they don't exist
+	ensure_unit_components(unit)
+	
 	# Get the combat component
 	var combat_component = unit.get_node_or_null("Components/CombatComponent")
 	if combat_component:
+		if not combat_component.has_method("start_combat"):
+			print("Replacing CombatComponent")
+			# Remove the existing component
+			combat_component.queue_free()
+			# Create a new properly initialized component
+			combat_component = CombatComponent.new(unit)
+			combat_component.name = "CombatComponent"
+			unit.get_node("Components").add_child(combat_component)
+			print("Created new CombatComponent for " + unit.name)
+		
+		# Now start combat with the new/existing component
 		combat_component.start_combat(self)
+		print("Started combat for " + unit.name + " combat component")
+	else:
+		print("Warning: No combat component found for " + unit.name)
 	
 	# Get the ability component
-	var ability_component = unit.get_node_or_null("Components/AbilityComponent")
+	var ability_component = unit.get_node_or_null("Components/AbilityComponent") 
 	if ability_component:
+		if not ability_component.has_method("start_combat"):
+			print("Replacing AbilityComponent")
+			# Remove the existing component
+			ability_component.queue_free()
+			# Create a new properly initialized component
+			ability_component = AbilityComponent.new(unit)
+			ability_component.name = "AbilityComponent"
+			unit.get_node("Components").add_child(ability_component)
+			print("Created new AbilityComponent for " + unit.name)
+		
+		# Now start combat
 		ability_component.start_combat(self)
+		print("Started combat for " + unit.name + " ability component")
+	else:
+		print("Warning: No ability component found for " + unit.name)
+
+func ensure_unit_components(unit):
+	# Make sure Components node exists
+	var components = unit.get_node_or_null("Components")
+	if not components:
+		components = Node.new()
+		components.name = "Components"
+		unit.add_child(components)
+		print("Created Components node for " + unit.name)
+	
+	# Add combat component if missing
+	var combat_component = components.get_node_or_null("CombatComponent")
+	if not combat_component:
+		if unit.get_script().get_path().find("PlayerUnit") != -1 or unit.get_script().get_path().find("EnemyUnit") != -1:
+			combat_component = CombatComponent.new(unit)
+			combat_component.name = "CombatComponent"
+			components.add_child(combat_component)
+			print("Created CombatComponent for " + unit.name)
+	
+	# Add ability component if missing
+	var ability_component = components.get_node_or_null("AbilityComponent")
+	if not ability_component:
+		if unit.get_script().get_path().find("PlayerUnit") != -1 or unit.get_script().get_path().find("EnemyUnit") != -1:
+			ability_component = AbilityComponent.new(unit)
+			ability_component.name = "AbilityComponent"
+			components.add_child(ability_component)
+			print("Created AbilityComponent for " + unit.name)
 
 func gather_units():
 	if not board or not board.tiles:
 		return
 		
-	# Find all player units
+	# Find all player units (only from player arena, not bench)
 	for i in range(board.PLAYER_ROWS):
 		for j in range(board.PLAYER_COLS):
 			var tile_key = "player_%d_%d" % [i, j]
@@ -242,6 +317,7 @@ func gather_units():
 				var unit = tile.get_occupying_unit()
 				if unit and unit.character_data and not unit.character_data.is_enemy:
 					player_units.append(unit)
+					print("Added player unit to combat: " + unit.character_data.display_name)
 	
 	# Find all enemy units
 	for i in range(board.ENEMY_ROWS):
@@ -252,6 +328,10 @@ func gather_units():
 				var unit = tile.get_occupying_unit()
 				if unit and unit.character_data and unit.character_data.is_enemy:
 					enemy_units.append(unit)
+					print("Added enemy unit to combat: " + unit.character_data.display_name)
+	
+	# Explicitly ignore bench units - they should not participate in combat
+	print("Combat gathered units - Players: " + str(player_units.size()) + ", Enemies: " + str(enemy_units.size()))
 
 func simulate_combat_tick():
 	# Execute one tick of combat simulation
@@ -259,15 +339,23 @@ func simulate_combat_tick():
 	
 	# Update components for all units
 	for unit in player_units + enemy_units:
-		# Update combat component
-		var combat_component = unit.get_node_or_null("Components/CombatComponent")
-		if combat_component:
-			combat_component.update_combat()
-		
-		# Update ability component
-		var ability_component = unit.get_node_or_null("Components/AbilityComponent")
-		if ability_component:
-			ability_component.update_combat(tick_interval)
+		# Check if unit still exists
+		if not is_instance_valid(unit):
+			continue
+			
+		# Try direct method first
+		if unit.has_method("update_combat"):
+			unit.update_combat()
+		else:
+			# Fall back to component-based approach
+			var combat_component = unit.get_node_or_null("Components/CombatComponent")
+			if combat_component and combat_component.has_method("update_combat"):
+				combat_component.update_combat()
+			
+			# Update ability component
+			var ability_component = unit.get_node_or_null("Components/AbilityComponent")
+			if ability_component and ability_component.has_method("update_combat"):
+				ability_component.update_combat(tick_interval)
 	
 	# Check win conditions
 	check_win_condition()
@@ -297,28 +385,32 @@ func end_combat(winner):
 	
 	# Reset all units
 	for unit in player_units:
-		unit.end_combat()
-		
-		# End combat for components
-		var combat_component = unit.get_node_or_null("Components/CombatComponent")
-		if combat_component:
-			combat_component.end_combat()
-			
-		var ability_component = unit.get_node_or_null("Components/AbilityComponent")
-		if ability_component:
-			ability_component.end_combat()
+		if is_instance_valid(unit):
+			if unit.has_method("end_combat"):
+				unit.end_combat()
+			else:
+				# End combat for components
+				var combat_component = unit.get_node_or_null("Components/CombatComponent")
+				if combat_component and combat_component.has_method("end_combat"):
+					combat_component.end_combat()
+					
+				var ability_component = unit.get_node_or_null("Components/AbilityComponent")
+				if ability_component and ability_component.has_method("end_combat"):
+					ability_component.end_combat()
 	
 	for unit in enemy_units:
-		unit.end_combat()
-		
-		# End combat for components
-		var combat_component = unit.get_node_or_null("Components/CombatComponent")
-		if combat_component:
-			combat_component.end_combat()
-			
-		var ability_component = unit.get_node_or_null("Components/AbilityComponent")
-		if ability_component:
-			ability_component.end_combat()
+		if is_instance_valid(unit):
+			if unit.has_method("end_combat"):
+				unit.end_combat()
+			else:
+				# End combat for components
+				var combat_component = unit.get_node_or_null("Components/CombatComponent")
+				if combat_component and combat_component.has_method("end_combat"):
+					combat_component.end_combat()
+					
+				var ability_component = unit.get_node_or_null("Components/AbilityComponent")
+				if ability_component and ability_component.has_method("end_combat"):
+					ability_component.end_combat()
 	
 	print("Combat ended, winner: " + winner)
 	
@@ -329,6 +421,12 @@ func end_combat(winner):
 	emit_signal("combat_ended", winner)
 
 func find_path(unit, target_position):
+	if not board:
+		board = get_node_or_null("/root/GameBoard")
+		if not board:
+			push_error("ERROR: Cannot find path - board reference is missing")
+			return []
+	
 	# Get tiles for pathfinding
 	var start_tile = board.get_tile_at_position(unit.global_position)
 	var end_tile = board.get_tile_at_position(target_position)
@@ -487,12 +585,13 @@ func set_debug_pathfinding(enabled):
 		
 		# Force redraw all current paths
 		for unit in player_units + enemy_units:
-			var combat_component = unit.get_node_or_null("Components/CombatComponent")
-			if combat_component and combat_component.target_unit and combat_component.current_action == "moving":
-				# Re-find path to visualize
-				var path = find_path(unit, combat_component.target_unit.global_position)
-				if path.size() > 0:
-					debug_draw_path(path)
+			if is_instance_valid(unit):
+				var combat_component = unit.get_node_or_null("Components/CombatComponent")
+				if combat_component and combat_component.target_unit and combat_component.current_action == "moving":
+					# Re-find path to visualize
+					var path = find_path(unit, combat_component.target_unit.global_position)
+					if path.size() > 0:
+						debug_draw_path(path)
 	else:
 		# Clear debug meshes
 		clear_debug_meshes()
@@ -542,6 +641,9 @@ func debug_draw_unit_path(positions, unit=null):
 	return mesh_instances
 
 func get_closest_enemy(unit):
+	if not is_instance_valid(unit):
+		return null
+		
 	var enemy_list = enemy_units if not unit.character_data.is_enemy else player_units
 	
 	if enemy_list.size() == 0:
@@ -551,21 +653,26 @@ func get_closest_enemy(unit):
 	var min_distance = INF
 	
 	for enemy in enemy_list:
-		var distance = unit.global_position.distance_to(enemy.global_position)
-		if distance < min_distance:
-			min_distance = distance
-			closest = enemy
+		if is_instance_valid(enemy):
+			var distance = unit.global_position.distance_to(enemy.global_position)
+			if distance < min_distance:
+				min_distance = distance
+				closest = enemy
 	
 	return closest
 
 func get_enemies_in_range(unit, range_value):
+	if not is_instance_valid(unit):
+		return []
+		
 	var enemy_list = enemy_units if not unit.character_data.is_enemy else player_units
 	var in_range = []
 	
 	for enemy in enemy_list:
-		var distance = unit.global_position.distance_to(enemy.global_position)
-		if distance <= range_value:
-			in_range.append(enemy)
+		if is_instance_valid(enemy):
+			var distance = unit.global_position.distance_to(enemy.global_position)
+			if distance <= range_value:
+				in_range.append(enemy)
 	
 	return in_range
 
@@ -576,9 +683,11 @@ func manual_tick():
 	# Only refresh visualization once every few ticks
 	if debug_pathfinding and randf() < 0.3:  # 30% chance to update visuals
 		for unit in player_units + enemy_units:
-			var combat_component = unit.get_node_or_null("Components/CombatComponent")
-			if combat_component and combat_component.target_unit and combat_component.current_action == "moving":
-				var path = find_path(unit, combat_component.target_unit.global_position)
-				if path.size() > 0:
-					debug_draw_path(path)
-					break  # Only visualize one path at a time
+			if is_instance_valid(unit):
+				var combat_component = unit.get_node_or_null("Components/CombatComponent")
+				if combat_component and combat_component.target_unit and combat_component.current_action == "moving":
+					if is_instance_valid(combat_component.target_unit):
+						var path = find_path(unit, combat_component.target_unit.global_position)
+						if path.size() > 0:
+							debug_draw_path(path)
+							break  # Only visualize one path at a time

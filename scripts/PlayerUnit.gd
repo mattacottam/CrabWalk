@@ -17,13 +17,20 @@ var sell_zone = null
 
 # Status flags
 var combine_cooldown = false
+var star_decorations = []
 
 func _ready():
 	# Call parent _ready first
 	super._ready()
 	
+	# Find the board in the scene
+	board = get_node("/root/GameBoard")
+	
 	# Find the sell zone
 	sell_zone = get_node_or_null("/root/GameBoard/SellZone")
+	
+	# Create a collision shape if none exists
+	ensure_collision()
 	
 	# Create a plane for drag calculations
 	drag_plane = Plane(Vector3.UP, 0)
@@ -37,6 +44,50 @@ func _ready():
 	# Start idle animation
 	if animation_player:
 		animation_player.play(IDLE_ANIM)
+		
+	# Create and initialize components
+	initialize_components()
+		
+	# If we already have character data, apply it
+	if character_data:
+		apply_character_visuals()
+		
+	# Update UI
+	update_ui()
+	
+	# Initialize star level from character data
+	if character_data:
+		set_star_level(character_data.star_level)
+	else:
+		set_star_level(1)
+	
+	# Trigger automatic combine check (delayed to ensure everything is set up)
+	call_deferred("check_for_automatic_combine")
+
+# Add this new function to PlayerUnit:
+func initialize_components():
+	# Make sure Components node exists
+	var components = get_node_or_null("Components")
+	if not components:
+		components = Node.new()
+		components.name = "Components"
+		add_child(components)
+	
+	# Add and initialize the combat component
+	var combat_component_node = components.get_node_or_null("CombatComponent")
+	
+	if not combat_component_node:
+		var combat_component = CombatComponent.new(self)
+		combat_component.name = "CombatComponent"
+		components.add_child(combat_component)
+	
+	# Add and initialize the ability component
+	var ability_component_node = components.get_node_or_null("AbilityComponent")
+	
+	if not ability_component_node:
+		var ability_component = AbilityComponent.new(self)
+		ability_component.name = "AbilityComponent"
+		components.add_child(ability_component)
 
 func _unhandled_input(event):
 	# Skip if in combat or board is null
@@ -50,6 +101,7 @@ func _unhandled_input(event):
 				var ray_result = get_mouse_collision()
 				
 				if ray_result and (ray_result.collider == self or ray_result.collider.get_parent() == self):
+					print("Unit clicked: " + str(character_data.display_name if character_data else "Unknown"))
 					start_drag(event.position)
 			
 			elif is_dragging:
@@ -264,7 +316,7 @@ func sell_unit():
 			
 			# Create an independent timer in the board to remove the label
 			var timer = get_tree().create_timer(0.8)
-			timer.connect("timeout", func(): world_label.queue_free())
+			timer.timeout.connect(func(): world_label.queue_free())
 	
 	# Delete the unit immediately
 	queue_free()
@@ -293,38 +345,70 @@ func snap_to_tile(tile):
 		
 		tile.set_occupying_unit(self)
 
-# Check for automatic combining opportunities
-func check_for_automatic_combine():
-	if not board:
-		return
-		
-	# Don't combine if already on cooldown
-	if combine_cooldown:
-		return
-		
-	# Don't combine enemy units automatically
-	if character_data and character_data.is_enemy:
-		return
-		
-	# Make sure we can combine (star level < 3)
-	if star_level >= 3 or not character_data:
-		return
+# Set the star level for this unit
+func set_star_level(level: int):
+	star_level = clamp(level, 1, 3)
 	
-	# Find all matching units
-	var matching_units = find_matching_units()
+	# Update character data's star level as well
+	if character_data:
+		character_data.star_level = star_level
 	
-	# If we have EXACTLY 3 matching units, combine them
-	if matching_units.size() == 3:
-		# Set cooldown to prevent recursion
-		combine_cooldown = true
+	# Update scale based on star level
+	scale = STAR_SCALES[star_level]
+	
+	# Create star decorations
+	update_star_decorations()
+
+# Create visual star decorations
+func update_star_decorations():
+	# Remove any existing star decorations
+	for star in star_decorations:
+		if is_instance_valid(star):
+			star.queue_free()
+	star_decorations.clear()
+	
+	# Create stars based on star level
+	var star_color = STAR_COLORS[star_level]
+	
+	for i in range(star_level):
+		var star = create_star_mesh(star_color)
+		add_child(star)
 		
-		# Perform the combination
-		combine_units(matching_units)
+		# Position stars horizontally above the unit
+		var offset = (i - (star_level-1)/2.0) * 0.3  # Center the stars
+		star.position = Vector3(offset, 2.2, 0)
+		star_decorations.append(star)
+
+# Create a star mesh
+func create_star_mesh(color: Color) -> MeshInstance3D:
+	var star = MeshInstance3D.new()
+	
+	# Use a simple shape for the star (can be improved later)
+	var sphere = SphereMesh.new()
+	sphere.radius = 0.1
+	sphere.height = 0.2
+	star.mesh = sphere
+	
+	# Create glowing material
+	var material = StandardMaterial3D.new()
+	material.albedo_color = color
+	material.emission_enabled = true
+	material.emission = color
+	material.emission_energy_multiplier = 2.0
+	star.material_override = material
+	
+	return star
+
+# Check if this unit can combine with another
+func can_combine_with(other_unit) -> bool:
+	if not character_data or not other_unit or not other_unit.character_data:
+		return false
 		
-		# Reset cooldown after a delay
-		var timer = get_tree().create_timer(1.0)
-		await timer.timeout
-		combine_cooldown = false
+	# Must be same character, same star level, and both must be the same type (player or enemy)
+	return (character_data.id == other_unit.character_data.id and 
+	   star_level == other_unit.star_level and 
+	   star_level < 3 and
+	   character_data.is_enemy == other_unit.character_data.is_enemy)
 
 # Find all matching units on the board of the same type and star level
 func find_matching_units():
@@ -340,23 +424,51 @@ func find_matching_units():
 			var unit = tile.get_occupying_unit()
 			
 			# Skip self and already included units
-			if unit == null or matching_units.has(unit):
+			if unit == null or unit == self or matching_units.has(unit):
 				continue
 				
 			# Check if it's the same type and star level AND same enemy status
 			if (unit.character_data and 
 			   unit.character_data.id == character_data.id and 
 			   unit.star_level == star_level and
-			   (unit.character_data.is_enemy == character_data.is_enemy)):
+			   unit.character_data.is_enemy == character_data.is_enemy):
 				matching_units.append(unit)
 	
 	return matching_units
 
-# Combine three units into one higher star level unit
-func combine_units(units_to_combine):
-	if not board:
+# Check for automatic combining opportunities
+func check_for_automatic_combine():
+	# Don't combine if already on cooldown
+	if combine_cooldown:
 		return
 		
+	# Don't combine enemy units automatically
+	if character_data and character_data.is_enemy:
+		return
+		
+	# Make sure we can combine (star level < 3)
+	if star_level >= 3 or not character_data:
+		return
+	
+	# Find all matching units
+	var matching_units = find_matching_units()
+	print("Found " + str(matching_units.size()) + " matching units for " + character_data.display_name)
+	
+	# If we have EXACTLY 3 matching units, combine them
+	if matching_units.size() == 3:
+		# Set cooldown to prevent recursion
+		combine_cooldown = true
+		
+		# Perform the combination
+		combine_units(matching_units)
+		
+		# Reset cooldown after a delay
+		var timer = get_tree().create_timer(1.0)
+		await timer.timeout
+		combine_cooldown = false
+
+# Combine three units into one higher star level unit
+func combine_units(units_to_combine):
 	# Choose the first unit's tile as the target
 	var target_tile = board.get_tile_at_position(units_to_combine[0].global_position)
 	
@@ -433,10 +545,7 @@ func create_combine_effect(pos: Vector3):
 	particles.draw_pass_1 = mesh
 	
 	# Add to scene and start
-	if board:
-		board.add_child(particles)
-	else:
-		add_child(particles)
+	board.add_child(particles)
 	
 	# Remove after effect completes
 	var timer = get_tree().create_timer(particles.lifetime * 1.5)

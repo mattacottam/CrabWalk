@@ -58,6 +58,10 @@ const DYING_ANIM = "standing death forward 01/mixamo_com"
 const VICTORY_ANIM = "standing idle 03 examine/mixamo_com"
 
 func _ready():
+	# Find the board in the scene
+	if not board:
+		board = get_node_or_null("/root/GameBoard")
+	
 	# Check if the health bar system exists
 	health_bar_system = get_node_or_null("UIBillboard/HealthBarSystem")
 	
@@ -136,6 +140,14 @@ func ensure_collision():
 		collision_layer = 1
 		collision_mask = 0
 
+func ensure_board_reference():
+	if not board:
+		board = get_node_or_null("/root/GameBoard")
+		if not board:
+			push_error("Unable to find GameBoard reference - functionality may be limited")
+			return false
+	return true
+
 # Set character data and apply visuals
 func set_character_data(data):
 	character_data = data
@@ -202,6 +214,56 @@ func take_damage(amount: int):
 	
 	return current_health
 
+func take_combat_damage(amount, _attacker):
+	# Take damage
+	current_health = max(0, current_health - amount)
+	
+	# Update health bar
+	if health_bar_system:
+		health_bar_system.update_health_display(current_health)
+	
+	# Play damage animation if not dying
+	if current_health > 0:
+		play_animation("hurt")
+		
+		# Return to previous state after animation
+		var timer = get_tree().create_timer(0.3)
+		timer.timeout.connect(func(): resume_after_hit())
+	else:
+		# Unit is defeated
+		die_in_combat()
+
+# Resume previous state after being hit
+func resume_after_hit():
+	if in_combat:
+		current_action = "idle"
+		play_animation("idle")
+
+# Die during combat
+func die_in_combat():
+	if not in_combat:
+		return
+	
+	current_action = "dying"
+	play_animation("dying")
+	
+	# Release the current tile
+	var current_tile = null
+	if board:
+		current_tile = board.get_tile_at_position(global_position)
+	
+	if current_tile:
+		current_tile.set_occupying_unit(null)
+	
+	# Remove from combat lists
+	if combat_system:
+		combat_system.player_units.erase(self)
+		combat_system.enemy_units.erase(self)
+	
+	# Delay actual removal to allow animation to play
+	var timer = get_tree().create_timer(2.0)
+	timer.timeout.connect(func(): queue_free())
+
 # Heal character and update health display
 func heal(amount: int):
 	current_health = min(max_health, current_health + amount)
@@ -249,6 +311,7 @@ func set_star_level(level: int):
 
 # For Combat System
 func start_combat(combat_sys):
+	ensure_board_reference()
 	combat_system = combat_sys
 	in_combat = true
 	current_action = "idle"

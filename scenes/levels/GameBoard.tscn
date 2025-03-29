@@ -57,11 +57,11 @@ script = ExtResource("1_77p1f")
 [node name="UnitSpawner" type="Node" parent="."]
 script = ExtResource("2_ac6wt")
 
-[node name="CanvasLayer" type="CanvasLayer" parent="."]
+[node name="CombatSystem" type="Node" parent="."]
+script = ExtResource("11_r57k3")
 
-[node name="PlayerUI" parent="CanvasLayer" instance=ExtResource("4_77p1f")]
-
-[node name="ShopUI" parent="CanvasLayer" instance=ExtResource("5_qfvow")]
+[node name="BattleManager" type="Node" parent="."]
+script = ExtResource("10_28ang")
 
 [node name="BoardSurface" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, -0.15, 6)
@@ -77,14 +77,21 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -6.61261, 0)
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="Environment"]
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.969284, 0, 0, 0, 0.727121, 0, 0, 0, 0.969284, 12.5134, -2, 0)
+[node name="Water" type="MeshInstance3D" parent="Environment"]
+transform = Transform3D(0.969284, 0, 0, 0, 0.727121, 0, 0, 0, 0.969284, 12.5134, 4.61261, 0)
 mesh = SubResource("BoxMesh_33v6w")
+skeleton = NodePath("../..")
 surface_material_override/0 = SubResource("ShaderMaterial_6m12s")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.781444, 0.623975, 0, -0.623975, 0.781444, 10.7099, 4.86361, 20.7054)
 light_energy = 1.762
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="PlayerUI" parent="CanvasLayer" instance=ExtResource("4_77p1f")]
+
+[node name="ShopUI" parent="CanvasLayer" instance=ExtResource("5_qfvow")]
 
 [node name="MessageLayer" type="CanvasLayer" parent="."]
 layer = 10
@@ -106,12 +113,6 @@ script = ExtResource("8_r5hcy")
 
 [node name="EnemyUnitGenerator" type="Node" parent="."]
 script = ExtResource("9_f0wtn")
-
-[node name="BattleManager" type="Node" parent="."]
-script = ExtResource("10_28ang")
-
-[node name="CombatSystem" type="Node" parent="."]
-script = ExtResource("11_r57k3")
 
 [node name="DebugUI" type="CanvasLayer" parent="."]
 layer = 15

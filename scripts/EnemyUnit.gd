@@ -2,7 +2,7 @@ extends Unit
 class_name EnemyUnit
 
 # Movement and pathfinding
-var move_speed = 5.0
+var move_speed = 3.0
 var path_update_timer = 0.0
 var path_update_interval = 0.1  # Update path every 0.1 seconds
 

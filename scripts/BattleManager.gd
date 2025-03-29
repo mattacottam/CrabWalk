@@ -104,7 +104,16 @@ func start_battle():
 	var combat_system = get_node_or_null("/root/GameBoard/CombatSystem")
 	if combat_system:
 		# Let combat system handle the battle simulation
-		combat_system.combat_ended.connect(_on_combat_ended, CONNECT_ONE_SHOT)
+		# Connect to the end signal
+		if not combat_system.combat_ended.is_connected(_on_combat_ended):
+			combat_system.combat_ended.connect(_on_combat_ended, CONNECT_ONE_SHOT)
+		
+		# Let the combat system start the battle - DON'T directly call start_combat on units
+		# Manually call the combat system's method
+		if combat_system.has_method("start_combat"):
+			combat_system.start_combat()
+		else:
+			push_error("Combat system doesn't have start_combat method!")
 	else:
 		# Fallback to simple simulation if no combat system
 		simulate_battle()

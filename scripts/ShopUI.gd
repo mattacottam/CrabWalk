@@ -355,8 +355,8 @@ func spawn_character_on_bench(character_data):
 		var tile = board.tiles.get(tile_key)
 		
 		if tile and not tile.is_occupied():
-			# Spawn character scene
-			var character_scene = load("res://scenes/characters/BaseCharacter.tscn")
+			# Spawn character scene - IMPORTANT: Use PlayerUnit.tscn instead of BaseCharacter.tscn
+			var character_scene = load("res://scenes/characters/PlayerUnit.tscn")
 			var character = character_scene.instantiate()
 			board.add_child(character)
 			
@@ -373,7 +373,6 @@ func spawn_character_on_bench(character_data):
 			return
 	
 	print("No empty bench slots available")
-	# Could show a message about bench being full
 
 # Handle reroll button press
 func _on_reroll_button_pressed():

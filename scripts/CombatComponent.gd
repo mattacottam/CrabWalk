@@ -41,8 +41,11 @@ func start_combat(combat_sys):
 	
 	# Connect to combat tick signal
 	if combat_system:
-		if not combat_system.combat_tick.is_connected(update_combat):
-			combat_system.combat_tick.connect(update_combat)
+		# Safely disconnect first if already connected
+		if combat_system.combat_tick.is_connected(update_combat):
+			combat_system.combat_tick.disconnect(update_combat)
+		# Connect safely
+		combat_system.combat_tick.connect(update_combat)
 	
 	# Start idle combat animation
 	unit.play_animation("idle")
@@ -50,6 +53,11 @@ func start_combat(combat_sys):
 # End combat mode
 func end_combat():
 	in_combat = false
+	
+	# Safely disconnect signal
+	if combat_system and combat_system.combat_tick.is_connected(update_combat):
+		combat_system.combat_tick.disconnect(update_combat)
+		
 	combat_system = null
 	current_path.clear()
 	target_unit = null
@@ -145,7 +153,7 @@ func move_to_target():
 		return
 	
 	# Remove the first node (current position) if it's our current tile
-	if current_path.size() > 0:
+	if current_path.size() > 0 and board:
 		var current_tile = board.get_tile_at_position(unit.global_position)
 		if current_path[0] == current_tile:
 			current_path.remove_at(0)
@@ -188,15 +196,16 @@ func continue_movement():
 		# Reached next node, move to it exactly
 		unit.global_position = next_pos
 		
-		# Update tile occupancy
-		var previous_tile = board.get_tile_at_position(unit.global_position)
-		if previous_tile and previous_tile != next_tile:
-			previous_tile.set_occupying_unit(null)
-		
-		if unit.has_method("set_original_position"):
-			unit.set_original_position(unit.global_position)
+		# Update tile occupancy if board exists
+		if board:
+			var previous_tile = board.get_tile_at_position(unit.global_position)
+			if previous_tile and previous_tile != next_tile:
+				previous_tile.set_occupying_unit(null)
 			
-		next_tile.set_occupying_unit(unit)
+			if unit.has_method("set_original_position"):
+				unit.set_original_position(unit.global_position)
+				
+			next_tile.set_occupying_unit(unit)
 		
 		# Remove this node from path
 		current_path.remove_at(0)
@@ -244,7 +253,8 @@ func start_attack():
 			face_target(target_unit.global_position)
 		
 		# Deal damage after animation delay
-		get_tree().create_timer(0.5).connect("timeout", Callable(self, "deal_attack_damage"))
+		var timer = get_tree().create_timer(0.5)
+		timer.timeout.connect(func(): deal_attack_damage())
 		
 		# Reset cooldown
 		attack_cooldown = attack_cooldown_max
@@ -265,7 +275,11 @@ func deal_attack_damage():
 	var damage = unit.character_data.attack_damage if unit.character_data else 10
 	
 	# Apply damage to target
-	target_unit.take_combat_damage(damage, unit)
+	if target_unit.has_method("take_combat_damage"):
+		target_unit.take_combat_damage(damage, unit)
+	else:
+		# Fallback to normal damage
+		target_unit.take_damage(damage)
 	
 	# Show damage text
 	show_damage_text(target_unit.global_position, damage)
@@ -274,54 +288,11 @@ func deal_attack_damage():
 	current_action = "idle"
 	unit.play_animation("idle")
 
-# Take damage during combat
-func take_combat_damage(amount, _attacker):
-	# Take damage
-	unit.current_health = max(0, unit.current_health - amount)
-	
-	# Update health bar
-	if unit.health_bar_system:
-		unit.health_bar_system.update_health_display(unit.current_health)
-	
-	# Play damage animation if not dying
-	if unit.current_health > 0:
-		unit.play_animation("hurt")
-		
-		# Return to previous state after animation
-		get_tree().create_timer(0.3).connect("timeout", Callable(self, "resume_after_hit"))
-	else:
-		# Unit is defeated
-		die_in_combat()
-
-# Resume previous state after being hit
-func resume_after_hit():
-	if in_combat:
-		current_action = "idle"
-		unit.play_animation("idle")
-
-# Die during combat
-func die_in_combat():
-	if not in_combat:
-		return
-	
-	current_action = "dying"
-	unit.play_animation("dying")
-	
-	# Release the current tile
-	var current_tile = board.get_tile_at_position(unit.global_position)
-	if current_tile:
-		current_tile.set_occupying_unit(null)
-	
-	# Remove from combat lists
-	if combat_system:
-		combat_system.player_units.erase(unit)
-		combat_system.enemy_units.erase(unit)
-	
-	# Delay actual removal to allow animation to play
-	get_tree().create_timer(2.0).connect("timeout", Callable(unit, "queue_free"))
-
 # Show floating damage text
 func show_damage_text(pos, amount):
+	if not board:
+		return
+		
 	# Create 3D text to show damage
 	var text = Label3D.new()
 	

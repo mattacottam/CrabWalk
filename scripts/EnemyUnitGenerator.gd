@@ -306,8 +306,26 @@ func spawn_enemy_at_tile(enemy_data, tile):
 	# Set the occupying unit reference
 	tile.set_occupying_unit(enemy_unit)
 	
-	# Initialize the components
-	initialize_enemy_components(enemy_unit)
+	# Make sure Components node exists and has proper child components
+	var components = enemy_unit.get_node_or_null("Components")
+	if not components:
+		components = Node.new()
+		components.name = "Components"
+		enemy_unit.add_child(components)
+	
+	# Create and properly name the CombatComponent
+	var combat_component = components.get_node_or_null("CombatComponent")
+	if not combat_component:
+		combat_component = CombatComponent.new(enemy_unit)
+		combat_component.name = "CombatComponent"
+		components.add_child(combat_component)
+	
+	# Create and properly name the AbilityComponent
+	var ability_component = components.get_node_or_null("AbilityComponent")
+	if not ability_component:
+		ability_component = AbilityComponent.new(enemy_unit)
+		ability_component.name = "AbilityComponent"
+		components.add_child(ability_component)
 	
 	print("Placed " + enemy_data.display_name + " (Type: " + str(enemy_data.get_meta("unit_type")) + ", Star: " + str(enemy_data.star_level) + ")")
 	
